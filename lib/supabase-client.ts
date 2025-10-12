@@ -3,7 +3,7 @@ import { auth } from '@clerk/nextjs/server'
 
 // Server-side Supabase client with Clerk authentication
 export async function createServerSupabaseClient() {
-  const { getToken } = auth()
+  const { getToken } = await auth()
   
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -14,8 +14,11 @@ export async function createServerSupabaseClient() {
         persistSession: false
       },
       global: {
-        headers: {
-          Authorization: `Bearer ${await getToken()}`
+        headers: async () => {
+          const token = await getToken()
+          return {
+            Authorization: `Bearer ${token}`
+          }
         }
       }
     }
