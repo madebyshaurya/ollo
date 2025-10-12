@@ -1,13 +1,23 @@
 'use client'
 
 import { useSupabase } from '@/lib/hooks/use-supabase'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useUser } from '@clerk/nextjs'
 
+interface UserProfile {
+  id: string
+  clerk_user_id: string
+  email?: string
+  first_name?: string
+  last_name?: string
+  created_at: string
+  updated_at: string
+}
+
 export function UserProfileTest() {
-    const { supabase, getAuthenticatedSupabase, isAuthenticated } = useSupabase()
+  const { getAuthenticatedSupabase, isAuthenticated } = useSupabase()
     const { user } = useUser()
-    const [profile, setProfile] = useState<any>(null)
+    const [profile, setProfile] = useState<UserProfile | null>(null)
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [message, setMessage] = useState<string | null>(null)

@@ -1,11 +1,21 @@
 'use client'
 
 import { useSupabase } from '@/lib/hooks/use-supabase'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
+
+interface UserProfile {
+  id: string
+  clerk_user_id: string
+  email?: string
+  first_name?: string
+  last_name?: string
+  created_at: string
+  updated_at: string
+}
 
 export function SupabaseExample() {
-    const { supabase, isAuthenticated } = useSupabase()
-    const [data, setData] = useState<any>(null)
+  const { supabase, isAuthenticated } = useSupabase()
+  const [data, setData] = useState<UserProfile[] | null>(null)
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
 
