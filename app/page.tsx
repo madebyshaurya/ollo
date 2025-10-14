@@ -37,7 +37,17 @@ export default function Home() {
           </SignInButton>
         </SignedOut>
         <SignedIn>
-          <UserButton afterSignOutUrl="/" />
+          <div style={{ width: 48, height: 48, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <UserButton
+              appearance={{
+                elements: {
+                  avatarBox: "w-12 h-12 min-w-[48px] min-h-[48px]",
+                  userButtonAvatarBox: "w-12 h-12 min-w-[48px] min-h-[48px]",
+                  userButtonAvatarImage: "w-12 h-12 min-w-[48px] min-h-[48px]",
+                }
+              }}
+            />
+          </div>
         </SignedIn>
       </header>
 

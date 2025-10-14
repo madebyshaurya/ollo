@@ -6,7 +6,7 @@ import { cva } from "class-variance-authority"
 
 import { cn } from "@/lib/utils"
 
-const buttonVariantsOuter = cva("", {
+const buttonVariantsOuter = cva("cursor-pointer", {
   variants: {
     variant: {
       primary:
@@ -68,12 +68,12 @@ const innerDivVariants = cva(
 export interface UnifiedButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?:
-    | "primary"
-    | "secondary"
-    | "accent"
-    | "destructive"
-    | "minimal"
-    | "icon"
+  | "primary"
+  | "secondary"
+  | "accent"
+  | "destructive"
+  | "minimal"
+  | "icon"
   size?: "default" | "sm" | "lg" | "icon"
   asChild?: boolean
 }
