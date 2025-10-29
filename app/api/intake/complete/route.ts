@@ -28,19 +28,26 @@ function coerceNumber(value: unknown): number | null {
 function normalizeAnswers(raw: unknown): IntakeAnswerRecord[] {
   if (!Array.isArray(raw)) return []
   return raw
-    .map(entry => {
-      const record = entry as IntakeAnswerRecord
-      if (!record || typeof record !== "object") return null
-      if (typeof record.sequence !== "number" || !record.question || typeof record.question !== "object") {
-        return null
+    .reduce<IntakeAnswerRecord[]>((acc, entry) => {
+      if (!entry || typeof entry !== "object") {
+        return acc
       }
-      return {
+      const record = entry as Partial<IntakeAnswerRecord>
+      if (typeof record.sequence !== "number") {
+        return acc
+      }
+      const question = record.question
+      if (!question || typeof question !== "object") {
+        return acc
+      }
+
+      acc.push({
         sequence: record.sequence,
-        question: record.question,
+        question: question as IntakeAnswerRecord["question"],
         answer: Object.prototype.hasOwnProperty.call(record, "answer") ? record.answer ?? null : null
-      } satisfies IntakeAnswerRecord
-    })
-    .filter((record): record is IntakeAnswerRecord => record != null)
+      })
+      return acc
+    }, [])
     .slice(0, MAX_DYNAMIC_QUESTIONS)
 }
 

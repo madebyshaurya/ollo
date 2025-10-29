@@ -39,8 +39,9 @@ export function ProjectDeleteModal({ project, open, onOpenChange }: ProjectDelet
             } else {
                 toast.error(result.error || "Failed to delete project")
             }
-        } catch (error) {
-            toast.error("An error occurred while deleting the project")
+        } catch (error: unknown) {
+            const message = error instanceof Error ? error.message : "An error occurred while deleting the project"
+            toast.error(message)
         } finally {
             setIsLoading(false)
         }
@@ -77,4 +78,3 @@ export function ProjectDeleteModal({ project, open, onOpenChange }: ProjectDelet
         </Dialog>
     )
 }
-

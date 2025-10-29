@@ -260,7 +260,8 @@ export function ProjectCreationModal({ children }: ProjectCreationModalProps) {
 
   const parseResponse = React.useCallback(async <T,>(response: Response): Promise<T> => {
     const text = await response.text()
-    let data: any = {}
+    let data: unknown = {}
+
     if (text) {
       try {
         data = JSON.parse(text)
@@ -268,9 +269,21 @@ export function ProjectCreationModal({ children }: ProjectCreationModalProps) {
         data = { message: text }
       }
     }
+
     if (!response.ok) {
-      throw new Error(data?.message ?? data?.error ?? text ?? "Request failed")
+      const extractMessage = (payload: unknown): string | null => {
+        if (payload && typeof payload === "object") {
+          const record = payload as Record<string, unknown>
+          if (typeof record.message === "string") return record.message
+          if (typeof record.error === "string") return record.error
+        }
+        return null
+      }
+
+      const fallbackMessage = text || response.statusText || "Request failed"
+      throw new Error(extractMessage(data) ?? fallbackMessage)
     }
+
     return data as T
   }, [])
 
@@ -468,7 +481,7 @@ export function ProjectCreationModal({ children }: ProjectCreationModalProps) {
     } finally {
       setIsSubmittingAnswer(false)
     }
-  }, [currentQuestion, currentSequence, currentAnswer, dynamicAnswers, remainingQuestions, fetchQuestion, answerIsValid])
+  }, [currentQuestion, currentSequence, currentAnswer, dynamicAnswers, remainingQuestions, fetchQuestion, answerIsValid, budgetCurrency, budgetValue])
 
   const handleComplete = React.useCallback(async () => {
     if (!canFinish) return
@@ -495,13 +508,6 @@ export function ProjectCreationModal({ children }: ProjectCreationModalProps) {
       setIsCompleting(false)
     }
   }, [canFinish, projectType, projectName, purpose, experienceLevel, dynamicAnswers, parseResponse, router])
-
-  const remainingDisplay = React.useMemo(() => {
-    if (remainingQuestions != null) {
-      return Math.max(remainingQuestions, 0)
-    }
-    return Math.max(MAX_DYNAMIC_QUESTIONS - answeredCount - (currentQuestion ? 1 : 0), 0)
-  }, [remainingQuestions, answeredCount, currentQuestion])
 
   const typeStep = (
     <div className="space-y-6">
@@ -934,7 +940,7 @@ export function ProjectCreationModal({ children }: ProjectCreationModalProps) {
           </DialogHeader>
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              Are you sure you want to start over? This will clear all your current progress and you'll lose all the information you've entered.
+              Are you sure you want to start over? This will clear all your current progress and you&apos;ll lose all the information you&apos;ve entered.
             </p>
             <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
               <TextureButton

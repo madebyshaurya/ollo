@@ -42,8 +42,9 @@ export function ProjectRenameModal({ project, open, onOpenChange }: ProjectRenam
             } else {
                 toast.error(result.error || "Failed to rename project")
             }
-        } catch (error) {
-            toast.error("An error occurred while renaming the project")
+        } catch (error: unknown) {
+            const message = error instanceof Error ? error.message : "An error occurred while renaming the project"
+            toast.error(message)
         } finally {
             setIsLoading(false)
         }
@@ -92,4 +93,3 @@ export function ProjectRenameModal({ project, open, onOpenChange }: ProjectRenam
         </Dialog>
     )
 }
-

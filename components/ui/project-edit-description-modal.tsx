@@ -42,8 +42,9 @@ export function ProjectEditDescriptionModal({ project, open, onOpenChange }: Pro
             } else {
                 toast.error(result.error || "Failed to update description")
             }
-        } catch (error) {
-            toast.error("An error occurred while updating the description")
+        } catch (error: unknown) {
+            const message = error instanceof Error ? error.message : "An error occurred while updating the description"
+            toast.error(message)
         } finally {
             setIsLoading(false)
         }
@@ -93,4 +94,3 @@ export function ProjectEditDescriptionModal({ project, open, onOpenChange }: Pro
         </Dialog>
     )
 }
-

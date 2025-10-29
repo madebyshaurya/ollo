@@ -3,7 +3,7 @@
 import * as React from "react"
 import { Card, CardContent, CardDescription, CardTitle } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
-import { Cpu, Zap, MoreHorizontal, Edit, Trash2, FileText, Clock } from "lucide-react"
+import { Cpu, Zap, MoreHorizontal, Edit, Trash2, FileText } from "lucide-react"
 import { useRouter } from "next/navigation"
 import {
     DropdownMenu,
@@ -63,21 +63,6 @@ export function ProjectCard({ project, onRename, onDelete, onEditDescription }: 
                 return <Cpu className="h-5 w-5 text-purple-400" />
             default:
                 return <Cpu className="h-5 w-5 text-gray-400" />
-        }
-    }
-
-    const getStatusIcon = (status: Project["status"]) => {
-        switch (status) {
-            case "planning":
-                return <Clock className="h-3 w-3" />
-            case "in-progress":
-                return <Zap className="h-3 w-3" />
-            case "completed":
-                return <Cpu className="h-3 w-3" />
-            case "paused":
-                return <Clock className="h-3 w-3" />
-            default:
-                return <Clock className="h-3 w-3" />
         }
     }
 
