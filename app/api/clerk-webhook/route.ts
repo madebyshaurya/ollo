@@ -58,72 +58,43 @@ export async function POST(req: Request) {
 
   try {
     if (eventType === 'user.created') {
-      const { id, email_addresses, first_name, last_name } = evt.data
-      
-      console.log(`👤 Creating profile for user: ${id}`)
-      
-      // Create user profile in Supabase
-      const { data, error } = await supabase
-        .from('user_profiles')
-        .insert([
-          {
-            clerk_user_id: id,
-            email: email_addresses[0]?.email_address,
-            first_name,
-            last_name,
-          }
-        ])
-        .select()
+      const { id } = evt.data
 
-      if (error) {
-        console.error('Error creating user profile:', error)
-        return new Response('Error creating user profile', { status: 500 })
-      }
+      console.log(`👤 User created: ${id}`)
+      // No additional setup needed - projects table uses user_id directly from Clerk
+      // User data is handled through Clerk's user object when needed
 
-      console.log('✅ User profile created:', data)
-      
     } else if (eventType === 'user.deleted') {
       const { id } = evt.data
-      
-      console.log(`🗑️ Deleting profile for user: ${id}`)
-      
-      // Delete user profile from Supabase
-      const { error } = await supabase
+
+      console.log(`🗑️ Deleting all data for user: ${id}`)
+
+      // 1. Delete all projects associated with the user
+      const { error: projectsError } = await supabase
+        .from('projects')
+        .delete()
+        .eq('user_id', id)
+
+      if (projectsError) {
+        console.error('Error deleting user projects:', projectsError)
+        return new Response('Error deleting user projects', { status: 500 })
+      }
+
+      // 2. Delete user profile if it exists (for consistency)
+      const { error: profileError } = await supabase
         .from('user_profiles')
         .delete()
         .eq('clerk_user_id', id)
 
-      if (error) {
-        console.error('Error deleting user profile:', error)
-        return new Response('Error deleting user profile', { status: 500 })
+      if (profileError) {
+        console.error('Error deleting user profile:', profileError)
+        // Don't return error here as profile deletion is non-critical
       }
 
-      console.log('✅ User profile deleted')
-      
-    } else if (eventType === 'user.updated') {
-      const { id, email_addresses, first_name, last_name } = evt.data
-      
-      console.log(`📝 Updating profile for user: ${id}`)
-      
-      // Update user profile in Supabase
-      const { error } = await supabase
-        .from('user_profiles')
-        .update({
-          email: email_addresses[0]?.email_address,
-          first_name,
-          last_name,
-          updated_at: new Date().toISOString()
-        })
-        .eq('clerk_user_id', id)
+      // Extend this cleanup when additional user-owned tables are introduced
 
-      if (error) {
-        console.error('Error updating user profile:', error)
-        return new Response('Error updating user profile', { status: 500 })
-      }
-
-      console.log('✅ User profile updated')
+      console.log('✅ All user data deleted')
     }
-
   } catch (error) {
     console.error('Webhook processing error:', error)
     return new Response('Webhook processing error', { status: 500 })

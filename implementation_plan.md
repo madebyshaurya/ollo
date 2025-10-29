@@ -49,8 +49,49 @@ ollo is a web platform that automates electronics project planning, bill of mate
 | **Smart Build Planner**   | Project/milestone system; AI proposes steps, updates via Next.js pages, changes logged        | [Supabase](https://supabase.com), [Next.js](https://nextjs.org/docs) |
 | **Parts Research**        | Hybrid API lookup/web scraping ([Node.js Fetch](https://nodejs.org/api/http.html)), normalization routines | [Node.js](https://nodejs.org/), [Cheerio](https://cheerio.js.org/) |
 | **User Management**       | Auth, session, permissions, and project sharing via [Clerk](https://clerk.com/docs)           | [Clerk](https://clerk.com/docs) |
+| **AI-Assisted Project Setup** | Multi-step wizard in a modal (type → name → one-line purpose → AI-driven follow-ups). AI asks up to ~5 targeted questions (text/multiple-choice/slider) with suggested ranges (e.g., budget/timeline). Persists intake, creates project on completion, logs AI. | [Vercel AI SDK](https://vercel.com/docs/ai), [OpenAI](https://platform.openai.com/docs/api-reference), [Supabase](https://supabase.com) |
 
 ---
+
+### 3.1 AI-Assisted Project Setup Wizard
+
+UI/UX
+- Single modal with progress bar; one question per screen.
+- Steps: 1) Choose type (breadboard/pcb/custom) 2) Project name 3) One-sentence purpose (≤ ~50 words) 4) AI follow-up questions (≤ 5) 5) Review → Create project.
+- Inputs supported by AI: `text`, `multiple_choice`, `slider`. Sliders show suggested min/max and recommended value.
+
+Schema for dynamic question (JSON stored per answer)
+```
+{
+  type: 'text' | 'multiple_choice' | 'slider',
+  label: string,
+  helper?: string,
+  charLimit?: number,
+  options?: { value: string; label: string }[],
+  min?: number,
+  max?: number,
+  suggested?: number | string
+}
+```
+
+API Endpoints (Next.js route handlers)
+- POST `/api/intake/generate-question`: body = { sessionId, context }, returns `{ question }` as above. Uses Vercel AI SDK with `gpt-5-nano` by default.
+- POST `/api/intake/answer`: body = { sessionId, sequence, question, answer }, persists to Supabase.
+- POST `/api/intake/complete`: creates `projects` row from session context + answers; returns project id.
+
+AI Model & Prompting
+- Default model: `gpt-5-nano` via Vercel AI SDK for low-latency, low-cost question generation.
+- Guardrails: provide strict JSON schema, require one concise question, cap char limits, include safe defaults for sliders.
+- Optionally escalate to larger model for complex domains (feature flag).
+
+Validation & Limits
+- Rate limit per user/session (e.g., 30 req/min) and max 5 follow-up questions.
+- Server-side zod validation on endpoint payloads; sanitize stored JSON.
+- Error handling with fallbacks to static questions if AI fails.
+
+Observability & Logging
+- Log prompts/outputs to `ai_history` (user-scoped) and tie to `sessionId`.
+- Structured logs to Supabase; surface non-2xx in logs dashboard.
 
 ## 4. Data Architecture
 
@@ -62,11 +103,16 @@ ollo is a web platform that automates electronics project planning, bill of mate
 | milestones    | id, project_id, name, deadline, status                              | —           |
 | logs          | id, project_id, body, timestamp                                     | —           |
 | ai_history    | id, user_id, project_id, input, output, created_at                  | —           |
+| project_intake_sessions | id, user_id, project_id (nullable until complete), status, created_at | — |
+| project_intake_answers  | id, session_id, sequence, question_json, answer_json, created_at      | — |
 
 **Relations:**  
 - Users → Projects (1:M)  
 - Projects → Components/Milestones/Logs (1:M)  
 - AI history is per-user, per-project
+- Users → project_intake_sessions (1:M)
+- project_intake_sessions → project_intake_answers (1:M)
+- project_intake_sessions → Projects (0 or 1)
 
 ---
 

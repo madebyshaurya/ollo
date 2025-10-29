@@ -1,44 +1,51 @@
-'use client';
+'use client'
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react'
+
+import { cn } from '@/lib/utils'
 
 type VideoBackgroundProps = {
-  src: string;
-  className?: string;
-};
+  src: string
+  className?: string
+}
 
 export default function VideoBackground({ src, className }: VideoBackgroundProps) {
-  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null)
 
   useEffect(() => {
-    const video = videoRef.current;
-    if (!video) return;
+    const video = videoRef.current
+    if (!video) return
 
-    const playVideo = async () => {
-      try {
-        await video.play();
-      } catch (error) {
-        // Autoplay can fail on some devices if user interaction is required.
-        // We silently ignore this here; the poster will stay visible.
-        console.warn('Background video autoplay prevented:', error);
-      }
-    };
-
-    if (video.readyState >= 2) {
-      playVideo();
-    } else {
-      video.addEventListener('loadeddata', playVideo, { once: true });
+    const attemptPlay = () => {
+      void video.play().catch(() => {
+        /* Ignore autoplay restrictions silently */
+      })
     }
 
+    if (video.readyState >= 2) {
+      attemptPlay()
+      return
+    }
+
+    const handleCanPlay = () => {
+      attemptPlay()
+      video.removeEventListener('canplay', handleCanPlay)
+    }
+
+    video.addEventListener('canplay', handleCanPlay)
+
     return () => {
-      video.removeEventListener('loadeddata', playVideo);
-    };
-  }, []);
+      video.removeEventListener('canplay', handleCanPlay)
+    }
+  }, [])
 
   return (
     <video
       ref={videoRef}
-      className={className}
+      className={cn(
+        'pointer-events-none absolute inset-0 h-full w-full object-cover',
+        className
+      )}
       src={src}
       autoPlay
       loop
@@ -48,5 +55,5 @@ export default function VideoBackground({ src, className }: VideoBackgroundProps
       controls={false}
       aria-hidden="true"
     />
-  );
+  )
 }

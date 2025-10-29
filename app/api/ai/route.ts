@@ -1,8 +1,8 @@
-const HACK_CLUB_AI_URL = 'https://ai.hackclub.com/chat/completions'
-const MODEL_ID = 'openai/gpt-oss-120b'
+import { generateText } from 'ai'
+import { openai } from '@ai-sdk/openai'
 
 type AiTask = 'summary' | 'emoji' | 'chat'
-type PresetKey = 'concise_summary' | 'emoji_only' | 'title_suggestion' | 'bullet_summary' | 'keywords'
+type PresetKey = 'concise_summary' | 'emoji_only' | 'title_suggestion' | 'bullet_summary' | 'keywords' | 'complete_summary' | 'dynamic_greeting'
 
 type PostBody = {
   // Legacy task support
@@ -15,12 +15,13 @@ type PostBody = {
   prompt?: string
   temperature?: number
   max_tokens?: number
+  userName?: string
+  userId?: string
 }
 
 const PRESETS: Record<PresetKey, { system: string; user: string }> = {
   concise_summary: {
-    system:
-      'You write ultra-concise 1-2 sentence summaries for internal dashboards. No headers, no fluff.',
+    system: 'You write ultra-concise 1-2 sentence summaries for internal dashboards. No headers, no fluff.',
     user: 'Summarize this project for a dashboard tooltip. Text:\n\n{{input}}'
   },
   emoji_only: {
@@ -28,8 +29,7 @@ const PRESETS: Record<PresetKey, { system: string; user: string }> = {
     user: 'Pick one emoji for this description:\n\n{{input}}'
   },
   title_suggestion: {
-    system:
-      'Suggest a short, catchy project title. 3-5 words. Avoid punctuation and quotes. Return only the title.',
+    system: 'Suggest a short, catchy project title. 3-5 words. Avoid punctuation and quotes. Return only the title.',
     user: 'Suggest a title for this project:\n\n{{input}}'
   },
   bullet_summary: {
@@ -39,12 +39,24 @@ const PRESETS: Record<PresetKey, { system: string; user: string }> = {
   keywords: {
     system: 'Extract 3-6 short, high-signal keywords (1-3 words each). Return a comma-separated list only.',
     user: 'Extract keywords from the following project description:\n\n{{input}}'
+  },
+  complete_summary: {
+    system: 'Create engaging project summaries. Include user name and use *asterisks* for emphasis.',
+    user: 'Summary for {{userName}}: {{input}}'
+  },
+  dynamic_greeting: {
+    system: 'Create greetings based on the time context provided. Use the time of day (morning/afternoon/evening/night) to create appropriate greetings like "Good morning, [name]!" or "Hey [name]!" for evening. Use *asterisks* around ONE word only. Keep it under 5 words total.',
+    user: 'Create a greeting for {{userName}} for {{input}}'
   }
 }
 
-function renderTemplate(template: string, input: unknown) {
+function renderTemplate(template: string, input: unknown, userName?: string) {
   const text = typeof input === 'string' ? input : JSON.stringify(input)
-  return template.replace('{{input}}', text)
+  let result = template.replace('{{input}}', text)
+  if (userName) {
+    result = result.replace('{{userName}}', userName)
+  }
+  return result
 }
 
 function buildMessages(body: PostBody) {
@@ -56,7 +68,7 @@ function buildMessages(body: PostBody) {
     const system = body.system || preset?.system
     const userTemplate = body.prompt || preset?.user
     if (system || userTemplate) {
-      const user = renderTemplate(userTemplate || '{{input}}', body.input)
+      const user = renderTemplate(userTemplate || '{{input}}', body.input, body.userName)
       return [
         { role: 'system' as const, content: system || 'Helpful assistant.' },
         { role: 'user' as const, content: user }
@@ -72,8 +84,7 @@ function buildMessages(body: PostBody) {
     return [
       {
         role: 'system' as const,
-        content:
-          'You are a concise assistant. Return a terse 1-2 sentence project summary. Avoid fluff. Do not include headers.'
+        content: 'You are a concise assistant. Return a terse 1-2 sentence project summary. Avoid fluff. Do not include headers.'
       },
       {
         role: 'user' as const,
@@ -87,8 +98,7 @@ function buildMessages(body: PostBody) {
     return [
       {
         role: 'system' as const,
-        content:
-          'Return only a single Unicode emoji that best represents the project. No extra text.'
+        content: 'Return only a single Unicode emoji that best represents the project. No extra text.'
       },
       {
         role: 'user' as const,
@@ -107,70 +117,62 @@ function buildMessages(body: PostBody) {
   return fallback
 }
 
-async function callHackClubAI(
-  messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>,
-  opts?: { temperature?: number; max_tokens?: number }
-) {
-  const res = await fetch(HACK_CLUB_AI_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model: MODEL_ID,
-      messages,
-      ...(typeof opts?.temperature === 'number' ? { temperature: opts.temperature } : {}),
-      ...(typeof opts?.max_tokens === 'number' ? { max_tokens: opts.max_tokens } : {})
-    })
-  })
-
-  if (!res.ok) {
-    const text = await res.text().catch(() => '')
-    throw new Error(`Hack Club AI error ${res.status}: ${text}`)
-  }
-
-  const data = await res.json()
-  // Best-effort OpenAI-compatible response shape
-  const content = data?.choices?.[0]?.message?.content
-  if (typeof content !== 'string') {
-    return { raw: data }
-  }
-  return { text: content, raw: data }
-}
-
 export async function POST(req: Request) {
   try {
     const body = (await req.json().catch(() => ({}))) as PostBody
     const messages = buildMessages(body)
-    const result = await callHackClubAI(messages, {
-      temperature: body.temperature,
-      max_tokens: body.max_tokens
+
+    // Convert messages to AI SDK format
+    const prompt = messages.map(msg => {
+      if (msg.role === 'system') {
+        return { role: 'system' as const, content: msg.content }
+      } else if (msg.role === 'user') {
+        return { role: 'user' as const, content: msg.content }
+      } else {
+        return { role: 'assistant' as const, content: msg.content }
+      }
+    })
+
+    // Generate text using AI SDK with OpenAI GPT-5 Nano
+    const result = await generateText({
+      model: openai('gpt-5-nano'),
+      messages: prompt,
+      temperature: body.temperature || 0.7
     })
 
     // Normalize response by preset or task for simpler client usage
     const preset = body.preset as PresetKey | undefined
     const task: AiTask = body.task || 'chat'
+
     if (preset === 'concise_summary' || task === 'summary') {
-      return Response.json({ summary: result.text ?? null })
+      return Response.json({ summary: result.text })
     }
     if (preset === 'emoji_only' || task === 'emoji') {
-      const emoji = (result.text || '').trim()
+      const emoji = result.text.trim()
       const first = emoji.split(/\s+/)[0] || ''
       return Response.json({ emoji: first })
     }
     if (preset === 'title_suggestion') {
-      return Response.json({ title: (result.text || '').trim() })
+      return Response.json({ title: result.text.trim() })
     }
     if (preset === 'bullet_summary') {
-      return Response.json({ bullets: (result.text || '').trim() })
+      return Response.json({ bullets: result.text.trim() })
     }
     if (preset === 'keywords') {
-      const cleaned = (result.text || '').replace(/\n/g, ' ').trim()
+      const cleaned = result.text.replace(/\n/g, ' ').trim()
       return Response.json({ keywords: cleaned })
     }
-    return Response.json({ output: result.text ?? null })
+    if (preset === 'complete_summary') {
+      return Response.json({ summary: result.text })
+    }
+    if (preset === 'dynamic_greeting') {
+      return Response.json({ greeting: result.text })
+    }
+
+    return Response.json({ output: result.text })
   } catch (err: unknown) {
+    console.error('AI API error:', err)
     const message = err instanceof Error ? err.message : 'Unknown error'
     return new Response(message, { status: 500 })
   }
 }
-
-

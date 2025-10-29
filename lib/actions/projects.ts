@@ -59,12 +59,25 @@ export async function createProject(data: CreateProjectData) {
     try {
       const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
       const baseInput = `${project.name}: ${project.description}`
+      
+      // Get user name for the summary
+      const supabase = await createServerSupabaseClient()
+      const { data: userData } = await supabase.auth.getUser()
+      const userName = userData?.user?.user_metadata?.first_name || 
+                      userData?.user?.user_metadata?.full_name?.split(' ')[0] || 
+                      "You"
 
       const [summaryRes, emojiRes, keywordsRes] = await Promise.all([
         fetch(`${baseUrl}/api/ai`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ preset: "concise_summary", input: baseInput, temperature: 0.2, max_tokens: 120 })
+          body: JSON.stringify({ 
+            preset: "complete_summary", 
+            input: baseInput, 
+            userName: userName,
+            temperature: 0.3, 
+            max_tokens: 150 
+          })
         }).catch(() => null),
         fetch(`${baseUrl}/api/ai`, {
           method: "POST",

@@ -1,10 +1,9 @@
 "use client"
 
 import * as React from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { TextureButton } from "@/components/ui/texture-button"
+import { Card, CardContent, CardDescription, CardTitle } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
-import { Cpu, Zap, Calendar, ArrowRight, MoreHorizontal, Edit, Trash2, FileText } from "lucide-react"
+import { Cpu, Zap, MoreHorizontal, Edit, Trash2, FileText, Clock } from "lucide-react"
 import { useRouter } from "next/navigation"
 import {
     DropdownMenu,
@@ -67,6 +66,21 @@ export function ProjectCard({ project, onRename, onDelete, onEditDescription }: 
         }
     }
 
+    const getStatusIcon = (status: Project["status"]) => {
+        switch (status) {
+            case "planning":
+                return <Clock className="h-3 w-3" />
+            case "in-progress":
+                return <Zap className="h-3 w-3" />
+            case "completed":
+                return <Cpu className="h-3 w-3" />
+            case "paused":
+                return <Clock className="h-3 w-3" />
+            default:
+                return <Clock className="h-3 w-3" />
+        }
+    }
+
     const getTypeLabel = (type: Project["type"]) => {
         switch (type) {
             case "breadboard":
@@ -87,34 +101,35 @@ export function ProjectCard({ project, onRename, onDelete, onEditDescription }: 
     return (
         <Card
             className={cn(
-                "group cursor-pointer transition-all duration-300 border-border bg-card hover:bg-accent hover:border-ring hover:shadow-lg hover:shadow-ring/5",
+                "group cursor-pointer transition-all duration-200 border-border bg-card hover:bg-accent/50 hover:border-ring/50",
                 "backdrop-blur-sm"
             )}
             onClick={handleClick}
         >
-            <CardHeader className="pb-3">
-                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
-                    <div className="flex items-center gap-3">
+            <CardContent className="p-6">
+                <div className="flex items-start justify-between mb-4">
+                    <div className="flex items-center gap-4">
                         <div className={cn(
                             "p-2 rounded-lg",
-                            project.type === "breadboard" ? "bg-blue-100" :
-                                project.type === "pcb" ? "bg-green-100" :
-                                    "bg-purple-100"
+                            project.type === "breadboard" ? "bg-blue-50 dark:bg-blue-950/30" :
+                                project.type === "pcb" ? "bg-green-50 dark:bg-green-950/30" :
+                                    "bg-purple-50 dark:bg-purple-950/30"
                         )}>
                             {getTypeIcon(project.type)}
                         </div>
-                        <div className="flex-1">
-                            <CardTitle className="text-card-foreground font-inter text-base sm:text-lg group-hover:text-card-foreground/90 transition-colors">
+                        <div className="space-y-1">
+                            <CardTitle className="text-card-foreground font-medium text-lg group-hover:text-card-foreground/80 transition-colors">
                                 {project.name}
                             </CardTitle>
-                            <CardDescription className="text-muted-foreground text-sm font-inter">
+                            <CardDescription className="text-muted-foreground text-sm">
                                 {getTypeLabel(project.type)}
                             </CardDescription>
                         </div>
                     </div>
-                    <div className="flex items-center gap-2">
+
+                    <div className="flex items-center gap-3">
                         <div className={cn(
-                            "px-2 py-1 rounded-full text-xs font-medium",
+                            "px-3 py-1.5 rounded-full text-xs font-medium",
                             getStatusColor(project.status)
                         )}>
                             {project.status.replace("-", " ")}
@@ -123,7 +138,7 @@ export function ProjectCard({ project, onRename, onDelete, onEditDescription }: 
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <button
-                                    className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-accent rounded-sm"
+                                    className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 hover:bg-accent rounded-md"
                                     onClick={(e) => e.stopPropagation()}
                                 >
                                     <MoreHorizontal className="h-4 w-4" />
@@ -162,36 +177,24 @@ export function ProjectCard({ project, onRename, onDelete, onEditDescription }: 
                         </DropdownMenu>
                     </div>
                 </div>
-            </CardHeader>
 
-            <CardContent className="space-y-4">
-                <p className="text-muted-foreground text-sm font-inter leading-relaxed">
+                <p className="text-muted-foreground text-sm leading-relaxed mb-4">
                     {project.description}
                 </p>
 
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 text-muted-foreground text-xs font-inter">
-                        <Calendar className="h-3 w-3" />
-                        <span>
-                            {new Date(project.created_at).toLocaleDateString("en-US", {
-                                month: "short",
-                                day: "numeric",
-                                year: "numeric"
-                            })}
-                        </span>
-                    </div>
-
-                    <TextureButton
-                        variant="minimal"
-                        size="sm"
-                        className="opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                        <span className="text-xs">Open</span>
-                        <ArrowRight className="h-3 w-3 ml-1" />
-                    </TextureButton>
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <span>
+                        {new Date(project.created_at).toLocaleDateString("en-US", {
+                            month: "short",
+                            day: "numeric",
+                            year: "numeric"
+                        })}
+                    </span>
+                    <span className="opacity-0 group-hover:opacity-100 transition-opacity">
+                        Open →
+                    </span>
                 </div>
             </CardContent>
         </Card>
     )
 }
-
