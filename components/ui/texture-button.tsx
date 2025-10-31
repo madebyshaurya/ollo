@@ -6,7 +6,7 @@ import { cva } from "class-variance-authority"
 
 import { cn } from "@/lib/utils"
 
-const buttonVariantsOuter = cva("cursor-pointer", {
+const buttonVariantsOuter = cva("cursor-pointer transition-transform duration-150 active:scale-[0.98]", {
   variants: {
     variant: {
       primary:

@@ -580,7 +580,7 @@ export function ProjectCreationModal({ children }: ProjectCreationModalProps) {
           />
           {!projectName ? (
             <div className="pointer-events-none absolute inset-y-0 left-3 flex items-center gap-2 text-sm text-muted-foreground">
-              <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-foreground">
+              <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-foreground opacity-60">
                 Tab
               </kbd>
               <span>{projectNameSample}</span>
@@ -629,7 +629,7 @@ export function ProjectCreationModal({ children }: ProjectCreationModalProps) {
           />
           {!purpose ? (
             <div className="pointer-events-none absolute left-3 right-3 top-2 flex items-start gap-2 text-sm text-muted-foreground">
-              <kbd className="mt-0.5 rounded border border-border bg-muted px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-foreground">
+              <kbd className="mt-0.5 rounded border border-border bg-muted px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-foreground opacity-60">
                 Tab
               </kbd>
               <span className="flex-1 leading-relaxed">{purposeSample}</span>

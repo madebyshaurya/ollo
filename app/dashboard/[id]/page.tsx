@@ -50,9 +50,9 @@ async function generateEmoji(input: string) {
 export default async function ProjectPage({
   params,
 }: {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }) {
-  const { id } = params
+  const { id } = await params
   const project = await fetchProject(id)
 
   const baseInput = `${project.name}: ${project.description}`
@@ -64,16 +64,14 @@ export default async function ProjectPage({
   return (
     <div className="mx-auto w-full max-w-4xl space-y-8 text-foreground">
       <section id="overview" className="space-y-4">
-        <div className="flex items-start gap-3">
-          <div className="text-3xl sm:text-4xl">{emoji || "🔧"}</div>
-          <div>
-            <h1 className="text-2xl font-editorial-new italic sm:text-3xl">
-              {project.name}
-            </h1>
-            <p className="font-inter text-sm text-muted-foreground sm:text-base">
-              {project.description}
-            </p>
-          </div>
+        <div className="flex flex-col items-center gap-3 text-center sm:gap-4">
+          <div className="text-5xl sm:text-6xl">{emoji || "🔧"}</div>
+          <h1 className="text-3xl font-editorial-new italic sm:text-4xl">
+            {project.name}
+          </h1>
+          <p className="font-inter text-sm text-muted-foreground sm:max-w-xl sm:text-base">
+            {project.description}
+          </p>
         </div>
       </section>
 
