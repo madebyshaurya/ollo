@@ -57,7 +57,7 @@ export default async function DashboardPage() {
                 <h2 className="text-2xl font-editorial-new text-foreground sm:text-3xl">
                   Your Projects
                 </h2>
-                <p className="font-inter text-sm text-muted-foreground sm:text-base">
+                <p className="font-sans text-sm text-muted-foreground sm:text-base">
                   Manage and track your hardware builds
                 </p>
               </div>

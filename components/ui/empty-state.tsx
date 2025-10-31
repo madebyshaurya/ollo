@@ -25,7 +25,7 @@ export function EmptyState() {
           <h3 className="font-editorial-new text-2xl font-light text-foreground">
             Ready to build something <span className="font-editorial-new-italic">amazing</span>?
           </h3>
-          <p className="font-inter text-base leading-relaxed text-muted-foreground">
+          <p className="font-sans text-base leading-relaxed text-muted-foreground">
             Start your hardware journey with ollo. Create your first project and let AI guide you from idea to completion.
           </p>
         </div>

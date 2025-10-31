@@ -69,7 +69,7 @@ export default async function ProjectPage({
           <h1 className="text-3xl font-editorial-new italic sm:text-4xl">
             {project.name}
           </h1>
-          <p className="font-inter text-sm text-muted-foreground sm:max-w-xl sm:text-base">
+          <p className="font-sans text-sm text-muted-foreground sm:max-w-xl sm:text-base">
             {project.description}
           </p>
         </div>

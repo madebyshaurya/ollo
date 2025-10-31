@@ -535,7 +535,7 @@ export function ProjectCreationModal({ children }: ProjectCreationModalProps) {
                     />
                   </div>
                   <div className="text-center">
-                    <CardTitle className="text-sm font-inter text-card-foreground">{option.title}</CardTitle>
+                    <CardTitle className="text-sm font-sans text-card-foreground">{option.title}</CardTitle>
                     <CardDescription className="text-xs text-muted-foreground">{option.subtitle}</CardDescription>
                   </div>
                 </div>
