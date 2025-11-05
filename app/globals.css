@@ -134,6 +134,12 @@
   .text-crisp {
     text-shadow: 0 -1px 0 rgba(255, 255, 255, 0.9), 0 1px 0 rgba(255, 255, 255, 0.6);
   }
+  .line-clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
 }
 
 /* Custom slider styles */
@@ -156,4 +162,15 @@
   cursor: pointer;
   border: 2px solid #ffffff;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+::selection {
+  background: #000; /* Highlight background color */
+  color: #FBFAF4; /* Text color when highlighted */
+}
+
+/* For Firefox compatibility */
+::-moz-selection {
+  background: #3B82F6;
+  color: #FBFAF4;
 }

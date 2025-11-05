@@ -3,7 +3,7 @@
 import * as React from "react"
 import { Card, CardContent, CardDescription, CardTitle } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
-import { Cpu, Zap, MoreHorizontal, Edit, Trash2, FileText } from "lucide-react"
+import { Cpu, CircuitBoard, Wrench, MoreHorizontal, Edit, Trash2, FileText } from "lucide-react"
 import { useRouter } from "next/navigation"
 import {
     DropdownMenu,
@@ -56,13 +56,13 @@ export function ProjectCard({ project, onRename, onDelete, onEditDescription }: 
     const getTypeIcon = (type: Project["type"]) => {
         switch (type) {
             case "breadboard":
-                return <Cpu className="h-5 w-5 text-blue-400" />
+                return <Cpu className="h-4 w-4 text-blue-500" />
             case "pcb":
-                return <Zap className="h-5 w-5 text-green-400" />
+                return <CircuitBoard className="h-4 w-4 text-emerald-500" />
             case "custom":
-                return <Cpu className="h-5 w-5 text-purple-400" />
+                return <Wrench className="h-4 w-4 text-purple-500" />
             default:
-                return <Cpu className="h-5 w-5 text-gray-400" />
+                return <Cpu className="h-4 w-4 text-gray-400" />
         }
     }
 
@@ -86,37 +86,53 @@ export function ProjectCard({ project, onRename, onDelete, onEditDescription }: 
     return (
         <Card
             className={cn(
-                "group cursor-pointer transition-all duration-200 border-border bg-card hover:bg-accent/50 hover:border-ring/50",
+                "group cursor-pointer border-border bg-card transition-all duration-200 hover:border-ring/60 hover:bg-accent/50",
                 "backdrop-blur-sm"
             )}
             onClick={handleClick}
+            onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault()
+                    handleClick()
+                }
+            }}
+            role="link"
+            tabIndex={0}
+            aria-label={`Open project ${project.name}`}
         >
-            <CardContent className="p-6">
-                <div className="flex items-start justify-between mb-4">
-                    <div className="flex items-center gap-4">
-                        <div className={cn(
-                            "p-2 rounded-lg",
-                            project.type === "breadboard" ? "bg-blue-50 dark:bg-blue-950/30" :
-                                project.type === "pcb" ? "bg-green-50 dark:bg-green-950/30" :
-                                    "bg-purple-50 dark:bg-purple-950/30"
-                        )}>
+            <CardContent className="p-4 sm:p-5">
+                <div className="mb-3 flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-3">
+                        <div
+                            className={cn(
+                                "rounded-lg border border-border/60 bg-muted/40 p-2 shadow-sm",
+                                project.type === "breadboard"
+                                    ? "text-blue-500"
+                                    : project.type === "pcb"
+                                        ? "text-emerald-500"
+                                        : "text-purple-500"
+                            )}
+                            aria-hidden
+                        >
                             {getTypeIcon(project.type)}
                         </div>
                         <div className="space-y-1">
-                            <CardTitle className="text-card-foreground font-medium text-lg group-hover:text-card-foreground/80 transition-colors">
+                            <CardTitle className="text-base font-medium text-card-foreground transition-colors group-hover:text-card-foreground/80 sm:text-lg">
                                 {project.name}
                             </CardTitle>
-                            <CardDescription className="text-muted-foreground text-sm">
+                            <CardDescription className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                                 {getTypeLabel(project.type)}
                             </CardDescription>
                         </div>
                     </div>
 
                     <div className="flex items-center gap-3">
-                        <div className={cn(
-                            "px-3 py-1.5 rounded-full text-xs font-medium",
-                            getStatusColor(project.status)
-                        )}>
+                        <div
+                            className={cn(
+                                "rounded-full px-2.5 py-1 text-[11px] font-medium tracking-wide",
+                                getStatusColor(project.status)
+                            )}
+                        >
                             {project.status.replace("-", " ")}
                         </div>
 
@@ -163,19 +179,19 @@ export function ProjectCard({ project, onRename, onDelete, onEditDescription }: 
                     </div>
                 </div>
 
-                <p className="text-muted-foreground text-sm leading-relaxed mb-4">
+                <p className="mb-3 line-clamp-3 text-sm leading-relaxed text-muted-foreground">
                     {project.description}
                 </p>
 
-                <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <span>
+                <div className="flex items-center justify-between text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                    <span className="text-[10px] sm:text-[11px]">
                         {new Date(project.created_at).toLocaleDateString("en-US", {
                             month: "short",
                             day: "numeric",
                             year: "numeric"
                         })}
                     </span>
-                    <span className="opacity-0 group-hover:opacity-100 transition-opacity">
+                    <span className="opacity-60 transition-opacity group-hover:opacity-100">
                         Open →
                     </span>
                 </div>

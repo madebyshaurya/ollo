@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import {
     Dialog,
@@ -22,11 +22,18 @@ interface ProjectRenameModalProps {
     }
     open: boolean
     onOpenChange: (open: boolean) => void
+    onSuccess?: (updatedName: string) => void
 }
 
-export function ProjectRenameModal({ project, open, onOpenChange }: ProjectRenameModalProps) {
+export function ProjectRenameModal({ project, open, onOpenChange, onSuccess }: ProjectRenameModalProps) {
     const [name, setName] = useState(project.name)
     const [isLoading, setIsLoading] = useState(false)
+
+    useEffect(() => {
+        if (open) {
+            setName(project.name)
+        }
+    }, [open, project.name])
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -38,6 +45,7 @@ export function ProjectRenameModal({ project, open, onOpenChange }: ProjectRenam
 
             if (result.success) {
                 toast.success("Project renamed successfully")
+                onSuccess?.(name.trim())
                 onOpenChange(false)
             } else {
                 toast.error(result.error || "Failed to rename project")

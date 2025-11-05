@@ -143,3 +143,28 @@ Observability & Logging
 ---
 
 Everything else (branding, color, font, design, marketing) is intentionally excluded. This is a technical engineering document only.
+
+---
+
+## 8. Implementation Status Tracker
+
+| Capability | Status | Notes |
+|------------|--------|-------|
+| **Dashboard project cards** | ✅ Implemented | Compact cards with keyboard support, contextual icons, rename/delete/edit flows hooked to Supabase. |
+| **Project detail shell** | ✅ Implemented | Summary, metadata, status control, markdown editing, and mobile responsiveness shipped. Summary editor widened with Markdown guidance. |
+| **Next recommended steps** | ✅ Implemented (in summary card) | Status-aware steps now appear inside the project summary card under key themes. |
+| **Workspace settings** | ✅ Implemented | Clerk-backed settings page with AI toggles, default view selector, and preferred currency stored in public metadata. |
+| **Currency preference wiring** | ✅ Implemented | Server pulls preferred currency and feeds it to parts recommendations and future pricing. |
+| **Multi-supplier parts recommendations** | ✅ Implemented (hybrid) | GPT-5 Nano planner + Firecrawl/live scraping with supplier image support; sample dataset used when live data unavailable. |
+| **Environment configuration** | ✅ Implemented | `.env.local` seeded with placeholders for Firecrawl, Digi-Key, Mouser, JLCPCB, PCBWay, LCSC keys (owner-only). |
+| **AI-assisted project creation** | ✅ Implemented pre-existing wizard | Multi-step intake modal creates projects with AI metadata. |
+| **Project stage workflow** | ✅ Implemented | Type-specific stage tracker on project overview with GPT-assisted initiation; completion auto-updates project status. |
+| **Per-stage parts workspace** | ✅ Implemented | AI-generated part categories stored per project; users can mark owned items, edit categories, and regenerate supplier suggestions with imagery. |
+| **Real-time availability polling** | 🚧 Planned | Edge function + React Query pipeline defined but not yet wired to UI listings. |
+| **Milestone/build tracking** | 🚧 Planned | Schema exists; UI & automation still pending. |
+| **Supplier-side caching (Redis)** | 🚧 Planned | Described in spec; Redis layer not yet provisioned in codebase. |
+| **Edge function refresh jobs** | 🚧 Planned | Scheduled syncs for inventory still to be authored/deployed. |
+| **Advanced supplier API integrations** | 🚧 Planned | Digi-Key, Mouser, JLCPCB, PCBWay, LCSC connectors awaiting API key provision and full response normalization. |
+| **Observability/logging enhancements** | 🚧 Partial | Basic logging present; structured Supabase log ingestion still outstanding. |
+
+Legend: ✅ Done · 🚧 In progress / pending · ⛔ Not started

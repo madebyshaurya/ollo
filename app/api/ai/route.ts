@@ -41,8 +41,8 @@ const PRESETS: Record<PresetKey, { system: string; user: string }> = {
     user: 'Extract keywords from the following project description:\n\n{{input}}'
   },
   complete_summary: {
-    system: 'Create engaging project summaries. Include user name and use *asterisks* for emphasis.',
-    user: 'Summary for {{userName}}: {{input}}'
+    system: 'Write a friendly 2-3 sentence project summary tailored to the named user. Start directly with the content. No headings, no greetings, no phrases like "Summary for...". Use light Markdown emphasis sparingly where it adds clarity.',
+    user: 'Project details:\nUser: {{userName}}\nDescription: {{input}}'
   },
   dynamic_greeting: {
     system: 'Create greetings based on the time context provided. Use the time of day (morning/afternoon/evening/night) to create appropriate greetings like "Good morning, [name]!" or "Hey [name]!" for evening. Use *asterisks* around ONE word only. Keep it under 5 words total.',

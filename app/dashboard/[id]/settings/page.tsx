@@ -1,5 +1,5 @@
+import { ProjectSettingsShell, ProjectSettingsData } from "@/components/dashboard/project-settings-shell"
 import { createServerSupabaseClient } from "@/lib/supabase-server"
-import { ProjectDetailShell, ProjectDetailData } from "@/components/dashboard/project-detail-shell"
 import { toProjectStageId } from "@/lib/workflows"
 
 interface ProjectRow {
@@ -7,29 +7,29 @@ interface ProjectRow {
   user_id: string
   name: string
   description: string
-  type: "breadboard" | "pcb" | "custom"
-  status: "planning" | "in-progress" | "completed" | "paused"
-  created_at: string
-  updated_at: string
   summary?: string | null
   emoji?: string | null
+  type: "breadboard" | "pcb" | "custom"
+  status: "planning" | "in-progress" | "completed" | "paused"
   complexity: number
   budget: number | null
+  timeline?: string | null
   microcontroller?: string | null
   microcontroller_other?: string | null
   purpose?: string | null
   target_audience?: string | null
-  timeline?: string | null
   keywords?: string[] | string | null
+  created_at: string
+  updated_at: string
   workflow_stage?: string | null
 }
 
-async function fetchProject(id: string): Promise<ProjectRow> {
+async function fetchProject(projectId: string): Promise<ProjectRow> {
   const supabase = await createServerSupabaseClient()
   const { data, error } = await supabase
     .from("projects")
     .select("*")
-    .eq("id", id)
+    .eq("id", projectId)
     .single()
 
   if (error || !data) {
@@ -39,43 +39,9 @@ async function fetchProject(id: string): Promise<ProjectRow> {
   return data as ProjectRow
 }
 
-async function generateEmoji(input: string) {
-  try {
-    const baseUrl =
-      process.env.NEXT_PUBLIC_APP_URL ||
-      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000")
-
-    const res = await fetch(`${baseUrl}/api/ai`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ preset: "emoji_only", input }),
-    })
-    if (!res.ok) return null
-    const json = await res.json()
-    return json.emoji as string | null
-  } catch {
-    return null
-  }
-}
-
-
-export default async function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function ProjectSettingsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const project = await fetchProject(id)
-
-  const baseInput = `${project.name}: ${project.description}`
-
-  const emoji = project.emoji
-    ? project.emoji as string
-    : await generateEmoji(baseInput)
-
-  const normalizeSummary = (text: string) =>
-    text
-      .replace(/^\s*Summary\s+for[^:–-]*[:–-]\s*/i, "")
-      .replace(/^\s*Summary\s+for[^,]*,\s*/i, "")
-      .trim()
-
-  const projectSummary = normalizeSummary(project.summary ?? project.description)
 
   const keywords = Array.isArray(project.keywords)
     ? project.keywords
@@ -83,16 +49,16 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
       ? project.keywords.split(/[;,]/).map((keyword) => keyword.trim()).filter(Boolean)
       : null
 
-  const detailData: ProjectDetailData = {
+  const settingsData: ProjectSettingsData = {
     id: project.id,
     name: project.name,
-    emoji: emoji,
+    emoji: project.emoji ?? null,
     description: project.description,
-    summary: projectSummary,
+    summary: project.summary ?? project.description,
     status: project.status,
     type: project.type,
     complexity: project.complexity,
-    budget: project.budget ?? null,
+    budget: project.budget,
     timeline: project.timeline ?? null,
     microcontroller: project.microcontroller ?? null,
     microcontroller_other: project.microcontroller_other ?? null,
@@ -104,5 +70,5 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
     workflow_stage: toProjectStageId(project.type, project.workflow_stage),
   }
 
-  return <ProjectDetailShell project={detailData} />
+  return <ProjectSettingsShell project={settingsData} />
 }

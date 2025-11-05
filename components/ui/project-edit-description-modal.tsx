@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import {
     Dialog,
@@ -22,11 +22,18 @@ interface ProjectEditDescriptionModalProps {
     }
     open: boolean
     onOpenChange: (open: boolean) => void
+    onSuccess?: (updatedDescription: string) => void
 }
 
-export function ProjectEditDescriptionModal({ project, open, onOpenChange }: ProjectEditDescriptionModalProps) {
+export function ProjectEditDescriptionModal({ project, open, onOpenChange, onSuccess }: ProjectEditDescriptionModalProps) {
     const [description, setDescription] = useState(project.description)
     const [isLoading, setIsLoading] = useState(false)
+
+    useEffect(() => {
+        if (open) {
+            setDescription(project.description)
+        }
+    }, [open, project.description])
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -38,6 +45,7 @@ export function ProjectEditDescriptionModal({ project, open, onOpenChange }: Pro
 
             if (result.success) {
                 toast.success("Description updated successfully")
+                onSuccess?.(description.trim())
                 onOpenChange(false)
             } else {
                 toast.error(result.error || "Failed to update description")
