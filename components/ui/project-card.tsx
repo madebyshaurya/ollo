@@ -1,9 +1,10 @@
 "use client"
 
 import * as React from "react"
-import { Card, CardContent, CardDescription, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
-import { Cpu, CircuitBoard, Wrench, MoreHorizontal, Edit, Trash2, FileText } from "lucide-react"
+import { formatRelativeTime } from "@/lib/utils/time"
+import { MoreHorizontal, Edit, Trash2, FileText } from "lucide-react"
 import { useRouter } from "next/navigation"
 import {
     DropdownMenu,
@@ -27,6 +28,7 @@ export interface Project {
     target_audience?: string
     timeline?: string
     custom_description?: string
+    emoji?: string | null
 }
 
 interface ProjectCardProps {
@@ -38,55 +40,45 @@ interface ProjectCardProps {
 
 export function ProjectCard({ project, onRename, onDelete, onEditDescription }: ProjectCardProps) {
     const router = useRouter()
+
     const getStatusColor = (status: Project["status"]) => {
         switch (status) {
             case "planning":
-                return "text-yellow-400 bg-yellow-400/10"
+                return "text-yellow-600 bg-yellow-50 border-yellow-200"
             case "in-progress":
-                return "text-blue-400 bg-blue-400/10"
+                return "text-blue-600 bg-blue-50 border-blue-200"
             case "completed":
-                return "text-green-400 bg-green-400/10"
+                return "text-green-600 bg-green-50 border-green-200"
             case "paused":
-                return "text-orange-400 bg-orange-400/10"
+                return "text-orange-600 bg-orange-50 border-orange-200"
             default:
-                return "text-gray-400 bg-gray-400/10"
+                return "text-gray-600 bg-gray-50 border-gray-200"
         }
     }
 
-    const getTypeIcon = (type: Project["type"]) => {
+    const getDefaultEmoji = (type: Project["type"]) => {
         switch (type) {
             case "breadboard":
-                return <Cpu className="h-4 w-4 text-blue-500" />
+                return "🔌"
             case "pcb":
-                return <CircuitBoard className="h-4 w-4 text-emerald-500" />
+                return "🔧"
             case "custom":
-                return <Wrench className="h-4 w-4 text-purple-500" />
+                return "⚡"
             default:
-                return <Cpu className="h-4 w-4 text-gray-400" />
-        }
-    }
-
-    const getTypeLabel = (type: Project["type"]) => {
-        switch (type) {
-            case "breadboard":
-                return "Breadboard"
-            case "pcb":
-                return "PCB Design"
-            case "custom":
-                return "Custom"
-            default:
-                return "Project"
+                return "🔧"
         }
     }
 
     const handleClick = () => {
         router.push(`/dashboard/${project.id}`)
-    };
+    }
+
+    const displayEmoji = project.emoji || getDefaultEmoji(project.type)
 
     return (
         <Card
             className={cn(
-                "group cursor-pointer border-border bg-card transition-all duration-200 hover:border-ring/60 hover:bg-accent/50",
+                "group cursor-pointer border-border bg-card transition-all duration-200 hover:border-ring/60 hover:shadow-sm",
                 "backdrop-blur-sm"
             )}
             onClick={handleClick}
@@ -100,100 +92,75 @@ export function ProjectCard({ project, onRename, onDelete, onEditDescription }: 
             tabIndex={0}
             aria-label={`Open project ${project.name}`}
         >
-            <CardContent className="p-4 sm:p-5">
-                <div className="mb-3 flex items-start justify-between gap-3">
-                    <div className="flex items-start gap-3">
-                        <div
-                            className={cn(
-                                "rounded-lg border border-border/60 bg-muted/40 p-2 shadow-sm",
-                                project.type === "breadboard"
-                                    ? "text-blue-500"
-                                    : project.type === "pcb"
-                                        ? "text-emerald-500"
-                                        : "text-purple-500"
-                            )}
-                            aria-hidden
-                        >
-                            {getTypeIcon(project.type)}
+            <CardContent className="p-4">
+                <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-3 min-w-0 flex-1">
+                        <div className="text-2xl flex-shrink-0" aria-hidden>
+                            {displayEmoji}
                         </div>
-                        <div className="space-y-1">
-                            <CardTitle className="text-base font-medium text-card-foreground transition-colors group-hover:text-card-foreground/80 sm:text-lg">
+                        <div className="min-w-0 flex-1">
+                            <h3 className="font-medium text-foreground text-base leading-tight mb-1 truncate">
                                 {project.name}
-                            </CardTitle>
-                            <CardDescription className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                                {getTypeLabel(project.type)}
-                            </CardDescription>
+                            </h3>
+                            <p className="text-sm text-muted-foreground mb-3 line-clamp-2 leading-relaxed">
+                                {project.description}
+                            </p>
+                            <div className="flex items-center justify-between">
+                                <time className="text-xs text-muted-foreground">
+                                    {formatRelativeTime(project.created_at)}
+                                </time>
+                                <div
+                                    className={cn(
+                                        "text-xs px-2 py-1 rounded-md border font-medium",
+                                        getStatusColor(project.status)
+                                    )}
+                                >
+                                    {project.status === "in-progress" ? "in progress" : project.status}
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-3">
-                        <div
-                            className={cn(
-                                "rounded-full px-2.5 py-1 text-[11px] font-medium tracking-wide",
-                                getStatusColor(project.status)
-                            )}
-                        >
-                            {project.status.replace("-", " ")}
-                        </div>
-
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <button
-                                    className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 hover:bg-accent rounded-md"
-                                    onClick={(e) => e.stopPropagation()}
-                                >
-                                    <MoreHorizontal className="h-4 w-4" />
-                                </button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                                <DropdownMenuItem
-                                    onClick={(e) => {
-                                        e.stopPropagation()
-                                        onRename?.(project)
-                                    }}
-                                >
-                                    <Edit className="mr-2 h-4 w-4" />
-                                    Rename
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                    onClick={(e) => {
-                                        e.stopPropagation()
-                                        onEditDescription?.(project)
-                                    }}
-                                >
-                                    <FileText className="mr-2 h-4 w-4" />
-                                    Edit Description
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                    onClick={(e) => {
-                                        e.stopPropagation()
-                                        onDelete?.(project)
-                                    }}
-                                    className="text-destructive focus:text-destructive"
-                                >
-                                    <Trash2 className="mr-2 h-4 w-4" />
-                                    Delete
-                                </DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-                    </div>
-                </div>
-
-                <p className="mb-3 line-clamp-3 text-sm leading-relaxed text-muted-foreground">
-                    {project.description}
-                </p>
-
-                <div className="flex items-center justify-between text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-                    <span className="text-[10px] sm:text-[11px]">
-                        {new Date(project.created_at).toLocaleDateString("en-US", {
-                            month: "short",
-                            day: "numeric",
-                            year: "numeric"
-                        })}
-                    </span>
-                    <span className="opacity-60 transition-opacity group-hover:opacity-100">
-                        Open →
-                    </span>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <button
+                                className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 hover:bg-muted rounded-md flex-shrink-0"
+                                onClick={(e) => e.stopPropagation()}
+                            >
+                                <MoreHorizontal className="h-4 w-4" />
+                            </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                                onClick={(e) => {
+                                    e.stopPropagation()
+                                    onRename?.(project)
+                                }}
+                            >
+                                <Edit className="mr-2 h-4 w-4" />
+                                Rename
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                                onClick={(e) => {
+                                    e.stopPropagation()
+                                    onEditDescription?.(project)
+                                }}
+                            >
+                                <FileText className="mr-2 h-4 w-4" />
+                                Edit Description
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                                onClick={(e) => {
+                                    e.stopPropagation()
+                                    onDelete?.(project)
+                                }}
+                                className="text-destructive focus:text-destructive"
+                            >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
                 </div>
             </CardContent>
         </Card>
