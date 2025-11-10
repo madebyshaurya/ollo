@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { TextureButton } from "@/components/ui/texture-button"
+import { ProjectDeleteConfirmationModal } from "@/components/ui/project-delete-confirmation-modal"
 import { updateProject } from "@/lib/actions/projects"
 import type { ProjectStageId } from "@/lib/workflows"
 
@@ -46,6 +47,7 @@ export function ProjectSettingsShell({ project }: { project: ProjectSettingsData
     budget: project.budget != null ? String(project.budget) : "",
   })
   const [isPending, startTransition] = useTransition()
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
 
   // Check if form has changes
   const hasChanges =
@@ -283,8 +285,27 @@ export function ProjectSettingsShell({ project }: { project: ProjectSettingsData
               {isPending ? "Saving..." : "Save Changes"}
             </TextureButton>
           </div>
+
+          {/* Delete Project Button */}
+          <div className="flex justify-end pt-2">
+            <TextureButton
+              variant="destructive"
+              size="default"
+              onClick={() => setShowDeleteModal(true)}
+              className="min-w-32 bg-red-600 hover:bg-red-700 text-white"
+            >
+              Delete Project
+            </TextureButton>
+          </div>
         </CardContent>
       </Card>
+
+      {/* Delete Confirmation Modal */}
+      <ProjectDeleteConfirmationModal
+        project={project}
+        open={showDeleteModal}
+        onOpenChange={setShowDeleteModal}
+      />
     </div>
   )
 }
