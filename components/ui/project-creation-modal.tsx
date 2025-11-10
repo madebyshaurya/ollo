@@ -102,6 +102,7 @@ export function ProjectCreationModal({ children }: ProjectCreationModalProps) {
   const [currentQuestion, setCurrentQuestion] = React.useState<IntakeQuestionConfig | null>(null)
   const [currentSequence, setCurrentSequence] = React.useState<number | null>(null)
   const [currentAnswer, setCurrentAnswer] = React.useState<string | number | null>(null)
+  const [currentMultipleChoiceAnswers, setCurrentMultipleChoiceAnswers] = React.useState<string[]>([])
   const [dynamicAnswers, setDynamicAnswers] = React.useState<IntakeAnswerRecord[]>([])
 
   const [remainingQuestions, setRemainingQuestions] = React.useState<number | null>(null)
@@ -179,6 +180,7 @@ export function ProjectCreationModal({ children }: ProjectCreationModalProps) {
     setCurrentQuestion(null)
     setCurrentSequence(null)
     setCurrentAnswer(null)
+    setCurrentMultipleChoiceAnswers([])
     setDynamicAnswers([])
     setRemainingQuestions(null)
     setQuestionLimitReached(false)
@@ -232,9 +234,8 @@ export function ProjectCreationModal({ children }: ProjectCreationModalProps) {
       return true
     }
     if (currentQuestion.type === "multiple_choice") {
-      if (typeof currentAnswer !== "string" || !currentAnswer) return false
-      const multi = currentQuestion as MultipleChoiceQuestionConfig
-      return multi.options.some(option => option.value === currentAnswer)
+      // Check if at least one option is selected
+      return currentMultipleChoiceAnswers.length > 0
     }
     if (currentQuestion.type === "slider") {
       // Special handling for budget questions
@@ -248,7 +249,7 @@ export function ProjectCreationModal({ children }: ProjectCreationModalProps) {
       return typeof currentAnswer === "number" && Number.isFinite(currentAnswer)
     }
     return false
-  }, [currentQuestion, currentAnswer, budgetValue])
+  }, [currentQuestion, currentAnswer, budgetValue, currentMultipleChoiceAnswers])
 
   const isBudgetQuestion = React.useMemo(() => {
     if (!currentQuestion || currentQuestion.type !== "slider") return false
@@ -355,6 +356,9 @@ export function ProjectCreationModal({ children }: ProjectCreationModalProps) {
           }
         } else if (data.question.type === "text") {
           setCurrentAnswer("")
+        } else if (data.question.type === "multiple_choice") {
+          setCurrentAnswer(null)
+          setCurrentMultipleChoiceAnswers([])
         } else {
           setCurrentAnswer(null)
         }
@@ -441,7 +445,10 @@ export function ProjectCreationModal({ children }: ProjectCreationModalProps) {
     if (currentQuestion.type === "text") {
       cleanedAnswer = typeof currentAnswer === "string" ? currentAnswer.trim() : ""
     } else if (currentQuestion.type === "multiple_choice") {
-      cleanedAnswer = currentAnswer
+      // Use the array of selected answers
+      cleanedAnswer = currentMultipleChoiceAnswers.length === 1
+        ? currentMultipleChoiceAnswers[0]
+        : currentMultipleChoiceAnswers
     } else if (currentQuestion.type === "slider") {
       // Special handling for budget questions
       const prompt = currentQuestion.prompt.toLowerCase()
@@ -470,6 +477,7 @@ export function ProjectCreationModal({ children }: ProjectCreationModalProps) {
       setCurrentQuestion(null)
       setCurrentSequence(null)
       setCurrentAnswer(null)
+      setCurrentMultipleChoiceAnswers([])
       setRemainingQuestions(nextRemaining)
       setQuestionLimitReached(nextRemaining <= 0)
 
@@ -481,7 +489,7 @@ export function ProjectCreationModal({ children }: ProjectCreationModalProps) {
     } finally {
       setIsSubmittingAnswer(false)
     }
-  }, [currentQuestion, currentSequence, currentAnswer, dynamicAnswers, remainingQuestions, fetchQuestion, answerIsValid, budgetCurrency, budgetValue])
+  }, [currentQuestion, currentSequence, currentAnswer, currentMultipleChoiceAnswers, dynamicAnswers, remainingQuestions, fetchQuestion, answerIsValid, budgetCurrency, budgetValue])
 
   const handleComplete = React.useCallback(async () => {
     if (!canFinish) return
@@ -754,26 +762,61 @@ export function ProjectCreationModal({ children }: ProjectCreationModalProps) {
               </div>
             )}
             {currentQuestion.type === "multiple_choice" && (
-              <div className="grid gap-2 sm:grid-cols-2">
-                {(currentQuestion as MultipleChoiceQuestionConfig).options.map(option => {
-                  const isActive = currentAnswer === option.value
-                  return (
-                    <button
-                      key={option.value}
-                      type="button"
-                      onClick={() => setCurrentAnswer(option.value)}
-                      className={cn(
-                        "rounded-xl border border-border bg-background/60 p-3 text-left transition",
-                        isActive && "border-ring bg-accent text-foreground shadow-sm"
-                      )}
-                    >
-                      <p className="text-sm font-medium">{option.label}</p>
-                      {option.helperText ? (
-                        <p className="text-xs text-muted-foreground mt-1">{option.helperText}</p>
-                      ) : null}
-                    </button>
-                  )
-                })}
+              <div className="space-y-3">
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {(currentQuestion as MultipleChoiceQuestionConfig).options.map(option => {
+                    const isActive = currentMultipleChoiceAnswers.includes(option.value)
+                    return (
+                      <button
+                        key={option.value}
+                        type="button"
+                        onClick={() => {
+                          setCurrentMultipleChoiceAnswers(prev =>
+                            prev.includes(option.value)
+                              ? prev.filter(v => v !== option.value)
+                              : [...prev, option.value]
+                          )
+                        }}
+                        className={cn(
+                          "rounded-xl border border-border bg-background/60 p-3 text-left transition",
+                          isActive && "border-ring bg-accent text-foreground shadow-sm"
+                        )}
+                      >
+                        <div className="flex items-start gap-2">
+                          <div className={cn(
+                            "mt-0.5 h-4 w-4 rounded border-2 flex items-center justify-center shrink-0",
+                            isActive ? "border-ring bg-ring" : "border-muted-foreground"
+                          )}>
+                            {isActive && (
+                              <svg
+                                className="h-3 w-3 text-background"
+                                fill="none"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth="2"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                              >
+                                <path d="M5 13l4 4L19 7" />
+                              </svg>
+                            )}
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-sm font-medium">{option.label}</p>
+                            {option.helperText ? (
+                              <p className="text-xs text-muted-foreground mt-1">{option.helperText}</p>
+                            ) : null}
+                          </div>
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
+                {currentMultipleChoiceAnswers.length > 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    {currentMultipleChoiceAnswers.length} {currentMultipleChoiceAnswers.length === 1 ? 'option' : 'options'} selected
+                  </p>
+                )}
               </div>
             )}
             {currentQuestion.type === "slider" && isBudgetQuestion ? (
