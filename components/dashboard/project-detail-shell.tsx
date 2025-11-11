@@ -2,10 +2,12 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { ArrowLeft, Settings2 } from "lucide-react"
+import { ArrowLeft, Settings2, Brain } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { ProjectStatusMenu } from "@/components/dashboard/project-status-menu"
+import { ProjectContextModal } from "@/components/ui/project-context-modal"
+import { ProjectMainContent } from "@/components/dashboard/project-main-content"
 import type { ProjectStageId } from "@/lib/workflows"
 
 type ProjectStatus = "planning" | "in-progress" | "completed" | "paused"
@@ -34,6 +36,7 @@ export interface ProjectDetailData {
 
 export function ProjectDetailShell({ project }: { project: ProjectDetailData }) {
   const [projectState, setProjectState] = useState(project)
+  const [contextModalOpen, setContextModalOpen] = useState(false)
 
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 text-foreground sm:gap-8">
@@ -82,6 +85,16 @@ export function ProjectDetailShell({ project }: { project: ProjectDetailData }) 
               size="sm"
               className="h-9 rounded-lg px-3 text-sm"
               variant="outline"
+              onClick={() => setContextModalOpen(true)}
+            >
+              <Brain className="mr-2 h-4 w-4" />
+              Context
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              className="h-9 rounded-lg px-3 text-sm"
+              variant="outline"
               asChild
             >
               <Link href={`/dashboard/${project.id}/settings`} className="inline-flex items-center gap-2">
@@ -92,6 +105,16 @@ export function ProjectDetailShell({ project }: { project: ProjectDetailData }) 
           </div>
         </div>
       </header>
+
+      {/* Main Content Section */}
+      <ProjectMainContent projectId={project.id} />
+
+      {/* Context Modal */}
+      <ProjectContextModal
+        projectId={project.id}
+        open={contextModalOpen}
+        onOpenChange={setContextModalOpen}
+      />
     </div>
   )
 }

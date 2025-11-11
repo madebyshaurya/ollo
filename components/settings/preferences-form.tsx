@@ -67,7 +67,6 @@ export function PreferencesForm({ initialPreferences }: PreferencesFormProps) {
           <div className="flex items-center gap-3 w-full">
             <div className="h-12 w-12 rounded-full overflow-hidden bg-muted/70 flex items-center justify-center">
               {user?.imageUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
                 <img src={user.imageUrl} alt={displayName} className="h-full w-full object-cover" />
               ) : (
                 <span className="text-sm font-medium text-muted-foreground">

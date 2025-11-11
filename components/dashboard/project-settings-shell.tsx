@@ -49,7 +49,6 @@ export function ProjectSettingsShell({ project }: { project: ProjectSettingsData
   const [isPending, startTransition] = useTransition()
   const [showDeleteModal, setShowDeleteModal] = useState(false)
 
-  // Check if form has changes
   const hasChanges =
     formValues.summary !== (project.summary || "") ||
     formValues.purpose !== (project.purpose || "") ||
@@ -88,7 +87,6 @@ export function ProjectSettingsShell({ project }: { project: ProjectSettingsData
 
         if (result.success) {
           toast.success("Project settings saved successfully")
-          // Update the original project data to reflect changes
           Object.assign(project, {
             summary: payload.summary || "",
             purpose: payload.purpose,

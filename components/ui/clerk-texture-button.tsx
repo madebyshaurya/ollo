@@ -24,7 +24,6 @@ export const ClerkTextureButton = forwardRef<HTMLButtonElement, Props>((props, r
 
   const sanitizedButtonProps = { ...rest } as UnifiedButtonProps & Partial<ClerkInjectedProps>;
 
-  // Remove Clerk-only navigation props that are not valid DOM attributes.
   delete sanitizedButtonProps.afterSignInUrl;
   delete sanitizedButtonProps.afterSignUpUrl;
   delete sanitizedButtonProps.redirectUrl;

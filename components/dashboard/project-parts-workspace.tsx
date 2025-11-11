@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState, useTransition } from "react"
+import { useEffect, useMemo, useState, useTransition, useCallback } from "react"
 import Image from "next/image"
 import { nanoid } from "nanoid"
 import {
@@ -36,34 +36,7 @@ export function ProjectPartsWorkspace({ projectId, projectType, currency }: Proj
   const [editingCategory, setEditingCategory] = useState<string | null>(null)
   const [isSaving, startSaving] = useTransition()
 
-  useEffect(() => {
-    void loadCategories()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [projectId])
-
-  async function loadCategories() {
-    setIsLoading(true)
-    setError(null)
-    try {
-      const response = await fetch(`/api/projects/${projectId}/parts/categories`)
-      if (!response.ok) {
-        const payload = await response.json().catch(() => ({}))
-        throw new Error(payload.error || "Failed to load categories")
-      }
-      const payload = (await response.json()) as { categories: ProjectPartCategoryRecord[] }
-      if (!payload.categories || payload.categories.length === 0) {
-        await regenerateCategories()
-        return
-      }
-      setCategories(hydrateCategories(payload.categories))
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to load categories")
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  async function regenerateCategories() {
+  const regenerateCategories = useCallback(async () => {
     setIsGenerating(true)
     setError(null)
     try {
@@ -86,7 +59,34 @@ export function ProjectPartsWorkspace({ projectId, projectType, currency }: Proj
       setIsLoading(false)
       setIsGenerating(false)
     }
-  }
+  }, [projectId, currency])
+
+  const loadCategories = useCallback(async function loadCategories() {
+    setIsLoading(true)
+    setError(null)
+    try {
+      const response = await fetch(`/api/projects/${projectId}/parts/categories`)
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}))
+        throw new Error(payload.error || "Failed to load categories")
+      }
+      const payload = (await response.json()) as { categories: ProjectPartCategoryRecord[] }
+      if (!payload.categories || payload.categories.length === 0) {
+        await regenerateCategories()
+        return
+      }
+      setCategories(hydrateCategories(payload.categories))
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to load categories")
+    } finally {
+      setIsLoading(false)
+    }
+  }, [projectId, regenerateCategories])
+
+  useEffect(() => {
+    void loadCategories()
+  }, [projectId, loadCategories])
+
   const persistCategories = async (nextCategories: ProjectPartCategoryRecord[]) => {
     try {
       const response = await fetch(`/api/projects/${projectId}/parts/categories`, {
@@ -132,12 +132,12 @@ export function ProjectPartsWorkspace({ projectId, projectType, currency }: Proj
       prev.map((category) =>
         category.id === categoryId
           ? {
-              ...category,
-              ...updates,
-              aiGenerated: updates.aiGenerated ?? category.aiGenerated,
-              updatedAt: new Date().toISOString(),
-              isNew: false,
-            }
+            ...category,
+            ...updates,
+            aiGenerated: updates.aiGenerated ?? category.aiGenerated,
+            updatedAt: new Date().toISOString(),
+            isNew: false,
+          }
           : category
       )
     )
@@ -167,14 +167,14 @@ export function ProjectPartsWorkspace({ projectId, projectType, currency }: Proj
       prev.map((category) =>
         category.id === categoryId
           ? {
-              ...category,
-              suggestions: category.suggestions.map((suggestion) =>
-                suggestion.id === suggestionId
-                  ? { ...suggestion, status: "accepted", owned: false }
-                  : suggestion
-              ),
-              updatedAt: new Date().toISOString(),
-            }
+            ...category,
+            suggestions: category.suggestions.map((suggestion) =>
+              suggestion.id === suggestionId
+                ? { ...suggestion, status: "accepted", owned: false }
+                : suggestion
+            ),
+            updatedAt: new Date().toISOString(),
+          }
           : category
       )
     )
@@ -185,14 +185,14 @@ export function ProjectPartsWorkspace({ projectId, projectType, currency }: Proj
       prev.map((category) =>
         category.id === categoryId
           ? {
-              ...category,
-              suggestions: category.suggestions.map((suggestion) =>
-                suggestion.id === suggestionId
-                  ? { ...suggestion, status: "dismissed" }
-                  : suggestion
-              ),
-              updatedAt: new Date().toISOString(),
-            }
+            ...category,
+            suggestions: category.suggestions.map((suggestion) =>
+              suggestion.id === suggestionId
+                ? { ...suggestion, status: "dismissed" }
+                : suggestion
+            ),
+            updatedAt: new Date().toISOString(),
+          }
           : category
       )
     )
@@ -203,14 +203,14 @@ export function ProjectPartsWorkspace({ projectId, projectType, currency }: Proj
       prev.map((category) =>
         category.id === categoryId
           ? {
-              ...category,
-              suggestions: category.suggestions.map((suggestion) =>
-                suggestion.id === suggestionId
-                  ? { ...suggestion, status: "pending" }
-                  : suggestion
-              ),
-              updatedAt: new Date().toISOString(),
-            }
+            ...category,
+            suggestions: category.suggestions.map((suggestion) =>
+              suggestion.id === suggestionId
+                ? { ...suggestion, status: "pending" }
+                : suggestion
+            ),
+            updatedAt: new Date().toISOString(),
+          }
           : category
       )
     )
@@ -221,14 +221,14 @@ export function ProjectPartsWorkspace({ projectId, projectType, currency }: Proj
       prev.map((category) =>
         category.id === categoryId
           ? {
-              ...category,
-              suggestions: category.suggestions.map((suggestion) =>
-                suggestion.id === suggestionId
-                  ? { ...suggestion, owned: !suggestion.owned }
-                  : suggestion
-              ),
-              updatedAt: new Date().toISOString(),
-            }
+            ...category,
+            suggestions: category.suggestions.map((suggestion) =>
+              suggestion.id === suggestionId
+                ? { ...suggestion, owned: !suggestion.owned }
+                : suggestion
+            ),
+            updatedAt: new Date().toISOString(),
+          }
           : category
       )
     )
@@ -241,13 +241,13 @@ export function ProjectPartsWorkspace({ projectId, projectType, currency }: Proj
       prev.map((category) =>
         category.id === categoryId
           ? {
-              ...category,
-              userItems: [
-                ...category.userItems,
-                { id: nanoid(), title: trimmed, done: false, createdAt: new Date().toISOString() },
-              ],
-              updatedAt: new Date().toISOString(),
-            }
+            ...category,
+            userItems: [
+              ...category.userItems,
+              { id: nanoid(), title: trimmed, done: false, createdAt: new Date().toISOString() },
+            ],
+            updatedAt: new Date().toISOString(),
+          }
           : category
       )
     )
@@ -258,12 +258,12 @@ export function ProjectPartsWorkspace({ projectId, projectType, currency }: Proj
       prev.map((category) =>
         category.id === categoryId
           ? {
-              ...category,
-              userItems: category.userItems.map((item) =>
-                item.id === itemId ? { ...item, done: !item.done } : item
-              ),
-              updatedAt: new Date().toISOString(),
-            }
+            ...category,
+            userItems: category.userItems.map((item) =>
+              item.id === itemId ? { ...item, done: !item.done } : item
+            ),
+            updatedAt: new Date().toISOString(),
+          }
           : category
       )
     )
@@ -274,10 +274,10 @@ export function ProjectPartsWorkspace({ projectId, projectType, currency }: Proj
       prev.map((category) =>
         category.id === categoryId
           ? {
-              ...category,
-              userItems: category.userItems.filter((item) => item.id !== itemId),
-              updatedAt: new Date().toISOString(),
-            }
+            ...category,
+            userItems: category.userItems.filter((item) => item.id !== itemId),
+            updatedAt: new Date().toISOString(),
+          }
           : category
       )
     )

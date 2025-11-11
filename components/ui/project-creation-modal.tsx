@@ -58,22 +58,19 @@ function countWords(value: string) {
 function formatSliderValue(slider: SliderQuestionConfig["slider"], rawValue: number | null) {
   const value = rawValue != null && Number.isFinite(rawValue) ? Math.round(rawValue) : Math.round(slider.suggested ?? slider.min)
 
-  // Handle pluralization for common units
   if (slider.unit) {
     const unit = slider.unit.toLowerCase()
-    // Check if the unit needs pluralization
     const needsPlural = value !== 1
     const pluralMap: Record<string, string> = {
       'month': needsPlural ? 'months' : 'month',
       'week': needsPlural ? 'weeks' : 'week',
       'day': needsPlural ? 'days' : 'day',
       'year': needsPlural ? 'years' : 'year',
-      '$': '$' // No pluralization for currency
+      '$': '$'
     }
 
     const displayUnit = pluralMap[unit] || unit
 
-    // For currency, show after value. For time units, show after value.
     if (unit === '$') {
       return `${displayUnit}${value}`
     } else {
@@ -234,14 +231,11 @@ export function ProjectCreationModal({ children }: ProjectCreationModalProps) {
       return true
     }
     if (currentQuestion.type === "multiple_choice") {
-      // Check if at least one option is selected
       return currentMultipleChoiceAnswers.length > 0
     }
     if (currentQuestion.type === "slider") {
-      // Special handling for budget questions
       const prompt = currentQuestion.prompt.toLowerCase()
       if (/budget|cost|price|spend|expense/.test(prompt)) {
-        // For budget, check if we have a valid number
         if (!budgetValue.trim()) return false
         const num = Number.parseFloat(budgetValue)
         return !isNaN(num) && isFinite(num) && num > 0
@@ -445,15 +439,12 @@ export function ProjectCreationModal({ children }: ProjectCreationModalProps) {
     if (currentQuestion.type === "text") {
       cleanedAnswer = typeof currentAnswer === "string" ? currentAnswer.trim() : ""
     } else if (currentQuestion.type === "multiple_choice") {
-      // Use the array of selected answers
       cleanedAnswer = currentMultipleChoiceAnswers.length === 1
         ? currentMultipleChoiceAnswers[0]
         : currentMultipleChoiceAnswers
     } else if (currentQuestion.type === "slider") {
-      // Special handling for budget questions
       const prompt = currentQuestion.prompt.toLowerCase()
       if (/budget|cost|price|spend|expense/.test(prompt)) {
-        // For budget, combine value and currency
         const num = Number.parseFloat(budgetValue)
         cleanedAnswer = `${budgetCurrency} ${num}`
       } else {
@@ -842,7 +833,6 @@ export function ProjectCreationModal({ children }: ProjectCreationModalProps) {
                     value={budgetValue}
                     onChange={(e) => {
                       const val = e.target.value
-                      // Allow empty string, numbers, and one decimal point
                       if (val === "" || /^\d*\.?\d*$/.test(val)) {
                         setBudgetValue(val)
                       }

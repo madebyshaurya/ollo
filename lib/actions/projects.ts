@@ -67,7 +67,6 @@ export async function createProject(data: CreateProjectData) {
 
     const supabaseClient = await createServerSupabaseClient()
 
-    // Prepare the project data
     const projectData = {
       user_id: userId,
       name: data.name,
@@ -109,16 +108,14 @@ export async function createProject(data: CreateProjectData) {
     }
 
     project.status = "in-progress"
-    ;(project as { workflow_stage?: ProjectStageId }).workflow_stage = initialStage
+      ; (project as { workflow_stage?: ProjectStageId }).workflow_stage = initialStage
 
-    // Best-effort: generate and persist AI metadata (summary, emoji)
     try {
       const baseUrl =
         process.env.NEXT_PUBLIC_APP_URL ||
         (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000")
       const baseInput = `${project.name}: ${project.description}`
 
-      // Get user name for the summary
       const { data: userData } = await supabaseClient.auth.getUser()
       const userName = userData?.user?.user_metadata?.first_name ||
         userData?.user?.user_metadata?.full_name?.split(' ')[0] ||
@@ -167,7 +164,6 @@ export async function createProject(data: CreateProjectData) {
       const summaryToUse = cleanedSummary || aiSummary
 
       if (summaryToUse || aiEmoji || aiKeywords) {
-        // Persist if columns exist; ignore if they don't
         await supabaseClient
           .from("projects")
           .update({
@@ -178,18 +174,15 @@ export async function createProject(data: CreateProjectData) {
           })
           .eq("id", project.id)
 
-        // Reflect AI metadata in the object we return
         project.summary = summaryToUse ?? project.summary ?? null
         project.description = summaryToUse ?? project.description
         project.emoji = aiEmoji ?? project.emoji ?? null
           ; (project as { keywords?: string[] | null }).keywords = aiKeywords ?? null
       }
     } catch (e) {
-      // Non-fatal; continue
       console.warn("AI metadata generation failed:", e)
     }
 
-    // Revalidate the dashboard to show the new project
     revalidatePath("/dashboard")
 
     return { success: true, project }
@@ -241,7 +234,7 @@ export async function updateProjectStatus(projectId: string, status: "planning" 
       .from("projects")
       .update({ status })
       .eq("id", projectId)
-      .eq("user_id", userId) // Ensure user can only update their own projects
+      .eq("user_id", userId)
 
     if (error) {
       console.error("Error updating project status:", error)
@@ -357,7 +350,7 @@ export async function updateProject(projectId: string, data: UpdateProjectData) 
       .from("projects")
       .update(updatePayload)
       .eq("id", projectId)
-      .eq("user_id", userId) // Ensure user can only update their own projects
+      .eq("user_id", userId)
 
     if (error) {
       console.error("Error updating project:", error)
@@ -505,7 +498,7 @@ export async function deleteProject(projectId: string) {
       .from("projects")
       .delete()
       .eq("id", projectId)
-      .eq("user_id", userId) // Ensure user can only delete their own projects
+      .eq("user_id", userId)
 
     if (error) {
       console.error("Error deleting project:", error)

@@ -28,14 +28,13 @@ export function CurrencySelect({
     const inputRef = useRef<HTMLInputElement>(null)
 
     const filteredCurrencies = useMemo(() => {
-        return searchCurrencies(searchQuery).slice(0, 20) // Limit to 20 results for performance
+        return searchCurrencies(searchQuery).slice(0, 20)
     }, [searchQuery])
 
     const selectedCurrency = useMemo(() => {
         return searchCurrencies("").find(currency => currency.code === value)
     }, [value])
 
-    // Close dropdown when clicking outside
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (containerRef.current && !containerRef.current.contains(event.target as Node)) {

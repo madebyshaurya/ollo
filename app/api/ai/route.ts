@@ -5,11 +5,9 @@ type AiTask = 'summary' | 'emoji' | 'chat'
 type PresetKey = 'concise_summary' | 'emoji_only' | 'title_suggestion' | 'bullet_summary' | 'keywords' | 'complete_summary' | 'dynamic_greeting'
 
 type PostBody = {
-  // Legacy task support
   task?: AiTask
   input?: unknown
   messages?: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>
-  // New preset/custom support
   preset?: PresetKey | string
   system?: string
   prompt?: string
@@ -60,7 +58,6 @@ function renderTemplate(template: string, input: unknown, userName?: string) {
 }
 
 function buildMessages(body: PostBody) {
-  // Preset/custom prompt handling takes priority
   if (body.preset || body.system || body.prompt) {
     const preset = (PRESETS as Record<string, { system: string; user: string }>)[
       String(body.preset || '')
@@ -76,7 +73,6 @@ function buildMessages(body: PostBody) {
     }
   }
 
-  // Legacy: task-based handling
   const task: AiTask = body.task || 'chat'
 
   if (task === 'summary') {
@@ -122,7 +118,6 @@ export async function POST(req: Request) {
     const body = (await req.json().catch(() => ({}))) as PostBody
     const messages = buildMessages(body)
 
-    // Convert messages to AI SDK format
     const prompt = messages.map(msg => {
       if (msg.role === 'system') {
         return { role: 'system' as const, content: msg.content }
@@ -133,14 +128,12 @@ export async function POST(req: Request) {
       }
     })
 
-    // Generate text using AI SDK with OpenAI GPT-5 Nano
     const result = await generateText({
       model: openai('gpt-5-nano'),
       messages: prompt,
       temperature: body.temperature || 0.7
     })
 
-    // Normalize response by preset or task for simpler client usage
     const preset = body.preset as PresetKey | undefined
     const task: AiTask = body.task || 'chat'
 

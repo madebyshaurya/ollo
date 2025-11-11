@@ -17,9 +17,7 @@ export default function VideoBackground({ src, className }: VideoBackgroundProps
     if (!video) return
 
     const attemptPlay = () => {
-      void video.play().catch(() => {
-        /* Ignore autoplay restrictions silently */
-      })
+      void video.play().catch(() => { })
     }
 
     if (video.readyState >= 2) {

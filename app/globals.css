@@ -130,7 +130,6 @@
     font-family: var(--font-editorial-new);
     font-style: italic;
   }
-  /* Crisp text shadow: 1px white top, 1px white bottom */
   .text-crisp {
     text-shadow: 0 -1px 0 rgba(255, 255, 255, 0.9), 0 1px 0 rgba(255, 255, 255, 0.6);
   }
@@ -148,7 +147,6 @@
   }
 }
 
-/* Custom slider styles */
 .slider::-webkit-slider-thumb {
   appearance: none;
   height: 20px;
@@ -171,11 +169,10 @@
 }
 
 ::selection {
-  background: #000; /* Highlight background color */
-  color: #FBFAF4; /* Text color when highlighted */
+  background: #000;
+  color: #FBFAF4;
 }
 
-/* For Firefox compatibility */
 ::-moz-selection {
   background: #3B82F6;
   color: #FBFAF4;

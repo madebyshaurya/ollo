@@ -6,7 +6,6 @@ export interface Currency {
 }
 
 export const CURRENCIES: Currency[] = [
-    // Major currencies
     { code: "USD", name: "US Dollar", symbol: "$", country: "United States" },
     { code: "EUR", name: "Euro", symbol: "€", country: "European Union" },
     { code: "GBP", name: "British Pound", symbol: "£", country: "United Kingdom" },
@@ -16,7 +15,6 @@ export const CURRENCIES: Currency[] = [
     { code: "AUD", name: "Australian Dollar", symbol: "A$", country: "Australia" },
     { code: "NZD", name: "New Zealand Dollar", symbol: "NZ$", country: "New Zealand" },
 
-    // Asian currencies
     { code: "CNY", name: "Chinese Yuan", symbol: "¥", country: "China" },
     { code: "INR", name: "Indian Rupee", symbol: "₹", country: "India" },
     { code: "KRW", name: "South Korean Won", symbol: "₩", country: "South Korea" },
@@ -29,7 +27,6 @@ export const CURRENCIES: Currency[] = [
     { code: "PHP", name: "Philippine Peso", symbol: "₱", country: "Philippines" },
     { code: "VND", name: "Vietnamese Dong", symbol: "₫", country: "Vietnam" },
 
-    // European currencies
     { code: "NOK", name: "Norwegian Krone", symbol: "kr", country: "Norway" },
     { code: "SEK", name: "Swedish Krona", symbol: "kr", country: "Sweden" },
     { code: "DKK", name: "Danish Krone", symbol: "kr", country: "Denmark" },
@@ -44,7 +41,6 @@ export const CURRENCIES: Currency[] = [
     { code: "UAH", name: "Ukrainian Hryvnia", symbol: "₴", country: "Ukraine" },
     { code: "TRY", name: "Turkish Lira", symbol: "₺", country: "Turkey" },
 
-    // Middle East & Africa
     { code: "AED", name: "UAE Dirham", symbol: "د.إ", country: "United Arab Emirates" },
     { code: "SAR", name: "Saudi Riyal", symbol: "﷼", country: "Saudi Arabia" },
     { code: "QAR", name: "Qatari Riyal", symbol: "﷼", country: "Qatar" },
@@ -62,7 +58,6 @@ export const CURRENCIES: Currency[] = [
     { code: "TND", name: "Tunisian Dinar", symbol: "د.ت", country: "Tunisia" },
     { code: "MAD", name: "Moroccan Dirham", symbol: "د.م.", country: "Morocco" },
 
-    // Latin America
     { code: "BRL", name: "Brazilian Real", symbol: "R$", country: "Brazil" },
     { code: "MXN", name: "Mexican Peso", symbol: "$", country: "Mexico" },
     { code: "ARS", name: "Argentine Peso", symbol: "$", country: "Argentina" },
@@ -83,7 +78,6 @@ export const CURRENCIES: Currency[] = [
     { code: "TTD", name: "Trinidad and Tobago Dollar", symbol: "TT$", country: "Trinidad and Tobago" },
     { code: "BBD", name: "Barbadian Dollar", symbol: "Bds$", country: "Barbados" },
 
-    // Other currencies
     { code: "ISK", name: "Icelandic Krona", symbol: "kr", country: "Iceland" },
     { code: "AMD", name: "Armenian Dram", symbol: "֏", country: "Armenia" },
     { code: "GEL", name: "Georgian Lari", symbol: "₾", country: "Georgia" },
@@ -133,15 +127,12 @@ export function searchCurrencies(query: string): Currency[] {
         currency.name.toLowerCase().includes(searchTerm) ||
         (currency.country && currency.country.toLowerCase().includes(searchTerm))
     ).sort((a, b) => {
-        // Prioritize exact code matches
         if (a.code.toLowerCase() === searchTerm) return -1
         if (b.code.toLowerCase() === searchTerm) return 1
 
-        // Then prioritize code starts with
         if (a.code.toLowerCase().startsWith(searchTerm) && !b.code.toLowerCase().startsWith(searchTerm)) return -1
         if (b.code.toLowerCase().startsWith(searchTerm) && !a.code.toLowerCase().startsWith(searchTerm)) return 1
 
-        // Then alphabetical by code
         return a.code.localeCompare(b.code)
     })
 }
