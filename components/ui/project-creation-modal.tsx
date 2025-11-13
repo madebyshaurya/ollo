@@ -14,7 +14,7 @@ import { useRouter } from "next/navigation"
 import { Loader2, CheckCircle2, ArrowLeft, ArrowRight } from "lucide-react"
 import { Slider } from "@/components/ui/slider"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { CurrencySelect } from "@/components/ui/currency-select"
 import {
   IntakeAnswerRecord,
   IntakeQuestionConfig,
@@ -31,16 +31,27 @@ interface ProjectCreationModalProps {
   children: React.ReactNode
 }
 
-type WizardStep = "type" | "name" | "purpose" | "experience" | "ai"
+type WizardStep = "type" | "details" | "experience" | "ai"
 
 const MAX_PURPOSE_WORDS = 50
 
 const TYPE_OPTIONS: Array<{ type: ProjectType; title: string; subtitle: string; image: string }> = [
   { type: "breadboard", title: "Breadboard", subtitle: "Prototyping", image: "/illustrations/breadboard.png" },
   { type: "pcb", title: "PCB Design", subtitle: "Production", image: "/illustrations/pcb.png" },
-  { type: "custom", title: "Custom", subtitle: "Other", image: "/illustrations/custom.png" }
+  // { type: "custom", title: "Custom", subtitle: "Other", image: "/illustrations/custom.png" }
 ]
 
+function isBudgetUnit(unit: string | null | undefined): boolean {
+  if (!unit) return false
+  const u = unit.toLowerCase()
+  return u === "$" || u === "usd" || u === "eur" || u === "gbp" || u === "cad" || u === "aud" || u === "jpy" || u === "cny"
+}
+
+function isTimeUnit(unit: string | null | undefined): boolean {
+  if (!unit) return false
+  const u = unit.toLowerCase()
+  return u === "weeks" || u === "week" || u === "days" || u === "day" || u === "months" || u === "month" || u === "years" || u === "year" || u === "hours" || u === "hour"
+}
 
 function getExperienceLabel(level: number): string {
   if (level <= 2) return "Beginner"
@@ -106,6 +117,7 @@ export function ProjectCreationModal({ children }: ProjectCreationModalProps) {
   const [questionLimitReached, setQuestionLimitReached] = React.useState(false)
   const [budgetCurrency, setBudgetCurrency] = React.useState("USD")
   const [budgetValue, setBudgetValue] = React.useState("")
+  const [timeValue, setTimeValue] = React.useState("")
 
   const [isInitializing, setIsInitializing] = React.useState(false)
   const [isLoadingQuestion, setIsLoadingQuestion] = React.useState(false)
@@ -199,8 +211,7 @@ export function ProjectCreationModal({ children }: ProjectCreationModalProps) {
   )
 
   const canAdvanceFromType = Boolean(projectType)
-  const canAdvanceFromName = projectName.trim().length >= 3
-  const canAdvanceFromPurpose = purpose.trim().length > 0 && !purposeExceeded
+  const canAdvanceFromDetails = projectName.trim().length >= 3 && purpose.trim().length > 0 && !purposeExceeded
   const canAdvanceFromExperience = experienceLevel >= 1 && experienceLevel <= 10
 
   const progressValue = React.useMemo(() => {
@@ -208,15 +219,13 @@ export function ProjectCreationModal({ children }: ProjectCreationModalProps) {
     const baseCompleted =
       step === "type"
         ? 0
-        : step === "name"
+        : step === "details"
           ? 1
-          : step === "purpose"
+          : step === "experience"
             ? 2
-            : step === "experience"
-              ? 3
-              : 4
+            : 3
     const totalIntakeTarget = Math.max(MIN_DYNAMIC_QUESTIONS, answeredCount + (currentQuestion ? 1 : 0))
-    const denominator = Math.max(4 + totalIntakeTarget, 1)
+    const denominator = Math.max(3 + totalIntakeTarget, 1)
     const numerator = baseCompleted + answeredCount
     return Math.min(Math.round((numerator / denominator) * 100), 99)
   }, [isCompleting, step, answeredCount, currentQuestion])
@@ -234,21 +243,31 @@ export function ProjectCreationModal({ children }: ProjectCreationModalProps) {
       return currentMultipleChoiceAnswers.length > 0
     }
     if (currentQuestion.type === "slider") {
-      const prompt = currentQuestion.prompt.toLowerCase()
-      if (/budget|cost|price|spend|expense/.test(prompt)) {
+      const unit = (currentQuestion as SliderQuestionConfig).slider.unit
+
+      if (isBudgetUnit(unit)) {
         if (!budgetValue.trim()) return false
         const num = Number.parseFloat(budgetValue)
+        return !isNaN(num) && isFinite(num) && num > 0
+      }
+      if (isTimeUnit(unit)) {
+        if (!timeValue.trim()) return false
+        const num = Number.parseFloat(timeValue)
         return !isNaN(num) && isFinite(num) && num > 0
       }
       return typeof currentAnswer === "number" && Number.isFinite(currentAnswer)
     }
     return false
-  }, [currentQuestion, currentAnswer, budgetValue, currentMultipleChoiceAnswers])
+  }, [currentQuestion, currentAnswer, budgetValue, timeValue, currentMultipleChoiceAnswers])
 
   const isBudgetQuestion = React.useMemo(() => {
     if (!currentQuestion || currentQuestion.type !== "slider") return false
-    const prompt = currentQuestion.prompt.toLowerCase()
-    return /budget|cost|price|spend|expense/.test(prompt)
+    return isBudgetUnit((currentQuestion as SliderQuestionConfig).slider.unit)
+  }, [currentQuestion])
+
+  const isTimeQuestion = React.useMemo(() => {
+    if (!currentQuestion || currentQuestion.type !== "slider") return false
+    return isTimeUnit((currentQuestion as SliderQuestionConfig).slider.unit)
   }, [currentQuestion])
 
   const canFinish = answeredCount >= MIN_DYNAMIC_QUESTIONS && !currentQuestion && !isInitializing && !isLoadingQuestion && !isSubmittingAnswer
@@ -339,12 +358,15 @@ export function ProjectCreationModal({ children }: ProjectCreationModalProps) {
         setQuestionLimitReached(data.status === "question_limit_reached" || (typeof data.remaining === "number" && data.remaining <= 0))
 
         if (data.question.type === "slider") {
-          // Check if it's a budget question
-          const prompt = data.question.prompt.toLowerCase()
-          if (/budget|cost|price|spend|expense/.test(prompt)) {
+          const unit = data.question.slider.unit
+
+          if (isBudgetUnit(unit)) {
             setCurrentAnswer(null)
             setBudgetValue("")
             setBudgetCurrency("USD")
+          } else if (isTimeUnit(unit)) {
+            setCurrentAnswer(null)
+            setTimeValue("")
           } else {
             setCurrentAnswer(getDefaultSliderValue(data.question as SliderQuestionConfig))
           }
@@ -390,16 +412,12 @@ export function ProjectCreationModal({ children }: ProjectCreationModalProps) {
       handleCancel()
       return
     }
-    if (step === "name") {
+    if (step === "details") {
       setStep("type")
       return
     }
-    if (step === "purpose") {
-      setStep("name")
-      return
-    }
     if (step === "experience") {
-      setStep("purpose")
+      setStep("details")
       return
     }
   }, [step, handleCancel])
@@ -415,14 +433,10 @@ export function ProjectCreationModal({ children }: ProjectCreationModalProps) {
 
   const handleNext = React.useCallback(async () => {
     if (step === "type") {
-      setStep("name")
+      setStep("details")
       return
     }
-    if (step === "name") {
-      setStep("purpose")
-      return
-    }
-    if (step === "purpose") {
+    if (step === "details") {
       setStep("experience")
       return
     }
@@ -430,6 +444,16 @@ export function ProjectCreationModal({ children }: ProjectCreationModalProps) {
       setStep("ai")
     }
   }, [step])
+
+  const handleDetailsKeyDown = React.useCallback(
+    (event: React.KeyboardEvent) => {
+      if (event.key === "Enter" && event.shiftKey && canAdvanceFromDetails) {
+        event.preventDefault()
+        void handleNext()
+      }
+    },
+    [canAdvanceFromDetails, handleNext]
+  )
 
   const handleSubmitAnswer = React.useCallback(async () => {
     if (!currentQuestion || currentSequence == null) return
@@ -443,10 +467,15 @@ export function ProjectCreationModal({ children }: ProjectCreationModalProps) {
         ? currentMultipleChoiceAnswers[0]
         : currentMultipleChoiceAnswers
     } else if (currentQuestion.type === "slider") {
-      const prompt = currentQuestion.prompt.toLowerCase()
-      if (/budget|cost|price|spend|expense/.test(prompt)) {
+      const sliderQuestion = currentQuestion as SliderQuestionConfig
+      const unit = sliderQuestion.slider.unit
+
+      if (isBudgetUnit(unit)) {
         const num = Number.parseFloat(budgetValue)
         cleanedAnswer = `${budgetCurrency} ${num}`
+      } else if (isTimeUnit(unit)) {
+        const num = Number.parseFloat(timeValue)
+        cleanedAnswer = `${num} ${unit || "days"}`
       } else {
         cleanedAnswer = typeof currentAnswer === "number" ? currentAnswer : Number(currentAnswer)
       }
@@ -480,7 +509,7 @@ export function ProjectCreationModal({ children }: ProjectCreationModalProps) {
     } finally {
       setIsSubmittingAnswer(false)
     }
-  }, [currentQuestion, currentSequence, currentAnswer, currentMultipleChoiceAnswers, dynamicAnswers, remainingQuestions, fetchQuestion, answerIsValid, budgetCurrency, budgetValue])
+  }, [currentQuestion, currentSequence, currentAnswer, currentMultipleChoiceAnswers, dynamicAnswers, remainingQuestions, fetchQuestion, answerIsValid, budgetCurrency, budgetValue, timeValue])
 
   const handleComplete = React.useCallback(async () => {
     if (!canFinish) return
@@ -512,7 +541,7 @@ export function ProjectCreationModal({ children }: ProjectCreationModalProps) {
     <div className="space-y-6">
       <div className="space-y-3">
         <Label className="text-sm font-medium text-foreground">Choose Project Type</Label>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           {TYPE_OPTIONS.map(option => (
             <Card
               key={option.type}
@@ -544,7 +573,7 @@ export function ProjectCreationModal({ children }: ProjectCreationModalProps) {
         </div>
       </div>
 
-      <div className="flex flex-col gap-3 pt-2 sm:flex-row">
+      <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:justify-between">
         <TextureButton variant="destructive" onClick={handleCancel} className="sm:flex-none sm:w-auto">
           Cancel
         </TextureButton>
@@ -574,7 +603,10 @@ export function ProjectCreationModal({ children }: ProjectCreationModalProps) {
             aria-placeholder={projectNameSample}
             value={projectName}
             onChange={event => setProjectName(event.target.value)}
-            onKeyDown={handleProjectNameTabFill}
+            onKeyDown={(e) => {
+              handleProjectNameTabFill(e)
+              handleDetailsKeyDown(e)
+            }}
             className="bg-background border-border text-foreground placeholder:text-muted-foreground focus:border-ring"
           />
           {!projectName ? (
@@ -589,26 +621,6 @@ export function ProjectCreationModal({ children }: ProjectCreationModalProps) {
         <p className="text-xs text-muted-foreground">A memorable name helps you reference it later.</p>
       </div>
 
-      <div className="flex flex-col gap-3 pt-2 sm:flex-row">
-        <TextureButton variant="minimal" onClick={handleBack} className="sm:flex-none sm:w-auto">
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back
-        </TextureButton>
-        <TextureButton
-          variant={canAdvanceFromName ? "accent" : "minimal"}
-          onClick={() => void handleNext()}
-          disabled={!canAdvanceFromName}
-          className="sm:flex-none sm:w-auto"
-        >
-          <ArrowRight className="mr-2 h-4 w-4" />
-          Next
-        </TextureButton>
-      </div>
-    </div>
-  )
-
-  const purposeStep = (
-    <div className="space-y-6">
       <div className="space-y-2">
         <Label htmlFor="project-purpose" className="text-sm font-medium text-foreground">
           In one sentence, what does this project do?
@@ -620,7 +632,10 @@ export function ProjectCreationModal({ children }: ProjectCreationModalProps) {
             aria-placeholder={purposeSample}
             value={purpose}
             onChange={event => setPurpose(event.target.value)}
-            onKeyDown={handlePurposeTabFill}
+            onKeyDown={(e) => {
+              handlePurposeTabFill(e)
+              handleDetailsKeyDown(e)
+            }}
             className={cn(
               "bg-background border-border text-foreground placeholder:text-muted-foreground focus:border-ring min-h-[110px] resize-none",
               purposeExceeded && "border-destructive focus:border-destructive"
@@ -645,15 +660,15 @@ export function ProjectCreationModal({ children }: ProjectCreationModalProps) {
         </div>
       </div>
 
-      <div className="flex flex-col gap-3 pt-2 sm:flex-row">
+      <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:justify-between">
         <TextureButton variant="minimal" onClick={handleBack} className="sm:flex-none sm:w-auto">
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back
         </TextureButton>
         <TextureButton
-          variant={canAdvanceFromPurpose ? "accent" : "minimal"}
+          variant={canAdvanceFromDetails ? "accent" : "minimal"}
           onClick={() => void handleNext()}
-          disabled={!canAdvanceFromPurpose}
+          disabled={!canAdvanceFromDetails}
           className="sm:flex-none sm:w-auto"
         >
           <ArrowRight className="mr-2 h-4 w-4" />
@@ -662,6 +677,8 @@ export function ProjectCreationModal({ children }: ProjectCreationModalProps) {
       </div>
     </div>
   )
+
+  const detailsStep = nameStep
 
   const experienceStep = (
     <div className="space-y-6">
@@ -700,7 +717,7 @@ export function ProjectCreationModal({ children }: ProjectCreationModalProps) {
         </div>
       </div>
 
-      <div className="flex flex-col gap-3 pt-2 sm:flex-row">
+      <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:justify-between">
         <TextureButton variant="minimal" onClick={handleBack} className="sm:flex-none sm:w-auto">
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back
@@ -803,31 +820,26 @@ export function ProjectCreationModal({ children }: ProjectCreationModalProps) {
                     )
                   })}
                 </div>
-                {currentMultipleChoiceAnswers.length > 0 && (
-                  <p className="text-xs text-muted-foreground">
-                    {currentMultipleChoiceAnswers.length} {currentMultipleChoiceAnswers.length === 1 ? 'option' : 'options'} selected
-                  </p>
-                )}
               </div>
             )}
             {currentQuestion.type === "slider" && isBudgetQuestion ? (
               <div className="space-y-4">
-                <div className="flex gap-2">
-                  <Select value={budgetCurrency} onValueChange={setBudgetCurrency}>
-                    <SelectTrigger className="w-32 bg-background border-border text-foreground">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="USD">USD</SelectItem>
-                      <SelectItem value="EUR">EUR</SelectItem>
-                      <SelectItem value="GBP">GBP</SelectItem>
-                      <SelectItem value="CAD">CAD</SelectItem>
-                      <SelectItem value="AUD">AUD</SelectItem>
-                      <SelectItem value="JPY">JPY</SelectItem>
-                      <SelectItem value="CNY">CNY</SelectItem>
-                    </SelectContent>
-                  </Select>
+                <div className="space-y-3">
+                  <Label htmlFor="budget-currency" className="text-xs font-medium text-muted-foreground">
+                    Currency
+                  </Label>
+                  <CurrencySelect
+                    value={budgetCurrency}
+                    onValueChange={setBudgetCurrency}
+                    placeholder="Search currencies..."
+                  />
+                </div>
+                <div className="space-y-3">
+                  <Label htmlFor="budget-amount" className="text-xs font-medium text-muted-foreground">
+                    Amount
+                  </Label>
                   <Input
+                    id="budget-amount"
                     type="number"
                     placeholder="Enter amount"
                     value={budgetValue}
@@ -841,6 +853,42 @@ export function ProjectCreationModal({ children }: ProjectCreationModalProps) {
                     min="0"
                     step="0.01"
                   />
+                </div>
+              </div>
+            ) : currentQuestion.type === "slider" && isTimeQuestion ? (
+              <div className="space-y-4">
+                <div className="space-y-3">
+                  {(() => {
+                    const timeUnit = (currentQuestion as SliderQuestionConfig).slider.unit || "days"
+                    const capitalizedUnit = timeUnit.charAt(0).toUpperCase() + timeUnit.slice(1)
+                    return (
+                      <>
+                        <Label htmlFor="time-amount" className="text-xs font-medium text-muted-foreground">
+                          {capitalizedUnit}
+                        </Label>
+                        <div className="flex gap-2">
+                          <Input
+                            id="time-amount"
+                            type="number"
+                            placeholder={`Enter number of ${timeUnit}`}
+                            value={timeValue}
+                            onChange={(e) => {
+                              const val = e.target.value
+                              if (val === "" || /^\d*\.?\d*$/.test(val)) {
+                                setTimeValue(val)
+                              }
+                            }}
+                            className="bg-background border-border text-foreground placeholder:text-muted-foreground focus:border-ring"
+                            min="0"
+                            step="1"
+                          />
+                          <div className="flex items-center px-3 text-sm text-muted-foreground whitespace-nowrap">
+                            {timeUnit}
+                          </div>
+                        </div>
+                      </>
+                    )
+                  })()}
                 </div>
               </div>
             ) : currentQuestion.type === "slider" ? (
@@ -908,7 +956,7 @@ export function ProjectCreationModal({ children }: ProjectCreationModalProps) {
         )}
       </div>
 
-      <div className="flex flex-col gap-3 pt-2 sm:flex-row">
+      <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:justify-between">
         <TextureButton
           variant="minimal"
           onClick={handleBack}
@@ -958,8 +1006,7 @@ export function ProjectCreationModal({ children }: ProjectCreationModalProps) {
             </div>
           )}
           {step === "type" && typeStep}
-          {step === "name" && nameStep}
-          {step === "purpose" && purposeStep}
+          {step === "details" && detailsStep}
           {step === "experience" && experienceStep}
           {step === "ai" && aiStep}
         </div>
