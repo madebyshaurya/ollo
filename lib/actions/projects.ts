@@ -58,10 +58,19 @@ export interface CreateProjectData {
 }
 
 export async function createProject(data: CreateProjectData) {
+  console.log('[createProject] Starting project creation with data:', {
+    name: data.name,
+    type: data.type,
+    complexity: data.complexity,
+    budget: data.budget
+  })
+
   try {
     const userId = await getCurrentUserId()
+    console.log('[createProject] User ID obtained:', userId)
 
     if (!userId) {
+      console.error('[createProject] User not authenticated')
       throw new Error("User not authenticated")
     }
 
@@ -85,6 +94,7 @@ export async function createProject(data: CreateProjectData) {
       parts_last_generated_at: null
     }
 
+    console.log('[createProject] Inserting project into database...')
     const { data: project, error } = await supabaseClient
       .from("projects")
       .insert(projectData)
@@ -92,35 +102,44 @@ export async function createProject(data: CreateProjectData) {
       .single()
 
     if (error) {
-      console.error("Error creating project:", error)
+      console.error('[createProject] Error creating project:', error)
       throw new Error("Failed to create project")
     }
 
+    console.log('[createProject] Project created successfully with ID:', project.id)
+
     const initialStage = getInitialStage(data.type)
+    console.log('[createProject] Setting initial workflow stage:', initialStage)
 
     try {
       await supabaseClient
         .from("projects")
         .update({ workflow_stage: initialStage })
         .eq("id", project.id)
+      console.log('[createProject] Workflow stage set successfully')
     } catch (stageError) {
-      console.warn("Unable to set initial workflow stage:", stageError)
+      console.warn('[createProject] Unable to set initial workflow stage:', stageError)
     }
 
     project.status = "in-progress"
       ; (project as { workflow_stage?: ProjectStageId }).workflow_stage = initialStage
 
+    console.log('[createProject] Starting AI metadata generation...')
     try {
       const baseUrl =
         process.env.NEXT_PUBLIC_APP_URL ||
         (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000")
       const baseInput = `${project.name}: ${project.description}`
+      console.log('[createProject] AI base URL:', baseUrl)
+      console.log('[createProject] AI input:', baseInput)
 
       const { data: userData } = await supabaseClient.auth.getUser()
       const userName = userData?.user?.user_metadata?.first_name ||
         userData?.user?.user_metadata?.full_name?.split(' ')[0] ||
         "You"
+      console.log('[createProject] User name for AI:', userName)
 
+      console.log('[createProject] Calling AI APIs for summary, emoji, and keywords...')
       const [summaryRes, emojiRes, keywordsRes] = await Promise.all([
         fetch(`${baseUrl}/api/ai`, {
           method: "POST",
@@ -145,12 +164,21 @@ export async function createProject(data: CreateProjectData) {
         }).catch(() => null)
       ])
 
+      console.log('[createProject] AI API responses received')
+      console.log('[createProject] Summary response OK:', summaryRes?.ok)
+      console.log('[createProject] Emoji response OK:', emojiRes?.ok)
+      console.log('[createProject] Keywords response OK:', keywordsRes?.ok)
+
       const summaryJson = summaryRes && summaryRes.ok ? await summaryRes.json().catch(() => ({})) : {}
       const emojiJson = emojiRes && emojiRes.ok ? await emojiRes.json().catch(() => ({})) : {}
       const keywordsJson = keywordsRes && keywordsRes.ok ? await keywordsRes.json().catch(() => ({})) : {}
       const aiSummary = summaryJson?.summary || null
       const aiEmoji = emojiJson?.emoji || null
       const aiKeywords = keywordsJson?.keywords || null
+
+      console.log('[createProject] AI Summary:', aiSummary)
+      console.log('[createProject] AI Emoji:', aiEmoji)
+      console.log('[createProject] AI Keywords:', aiKeywords)
 
       const cleanSummaryText = (text: string | null) => {
         if (!text) return null
@@ -164,6 +192,7 @@ export async function createProject(data: CreateProjectData) {
       const summaryToUse = cleanedSummary || aiSummary
 
       if (summaryToUse || aiEmoji || aiKeywords) {
+        console.log('[createProject] Updating project with AI metadata...')
         await supabaseClient
           .from("projects")
           .update({
@@ -178,16 +207,21 @@ export async function createProject(data: CreateProjectData) {
         project.description = summaryToUse ?? project.description
         project.emoji = aiEmoji ?? project.emoji ?? null
           ; (project as { keywords?: string[] | null }).keywords = aiKeywords ?? null
+
+        console.log('[createProject] Project updated with AI metadata successfully')
+      } else {
+        console.log('[createProject] No AI metadata to update')
       }
     } catch (e) {
-      console.warn("AI metadata generation failed:", e)
+      console.error('[createProject] AI metadata generation failed:', e)
     }
 
     revalidatePath("/dashboard")
 
+    console.log('[createProject] ✅ Project creation completed successfully:', project.id)
     return { success: true, project }
   } catch (error) {
-    console.error("Error in createProject:", error)
+    console.error('[createProject] ❌ Error in createProject:', error)
     return { success: false, error: error instanceof Error ? error.message : "Unknown error" }
   }
 }

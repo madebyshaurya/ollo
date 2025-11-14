@@ -51,9 +51,6 @@ export function ProjectDetailShell({ project }: { project: ProjectDetailData }) 
               <ArrowLeft className="h-4 w-4" />
             </Link>
             <div className="inline-flex items-center gap-3 rounded-xl border border-border/60 bg-muted/30 px-3 py-2">
-              <span className="text-3xl sm:text-4xl" aria-hidden>
-                {projectState.emoji || "🔧"}
-              </span>
               <div>
                 <h1 className="text-xl font-editorial-new font-light tracking-tight sm:text-2xl">
                   {projectState.name}

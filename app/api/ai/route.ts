@@ -116,7 +116,10 @@ function buildMessages(body: PostBody) {
 export async function POST(req: Request) {
   try {
     const body = (await req.json().catch(() => ({}))) as PostBody
+    console.log('[AI API] Request received with preset:', body.preset, 'task:', body.task)
+
     const messages = buildMessages(body)
+    console.log('[AI API] Built messages:', messages.length, 'messages')
 
     const prompt = messages.map(msg => {
       if (msg.role === 'system') {
@@ -128,43 +131,53 @@ export async function POST(req: Request) {
       }
     })
 
+    console.log('[AI API] Calling GPT-5 nano with temperature:', body.temperature || 0.7)
     const result = await generateText({
       model: openai('gpt-5-nano'),
       messages: prompt,
       temperature: body.temperature || 0.7
     })
+    console.log('[AI API] GPT-5 nano response received, length:', result.text.length)
 
     const preset = body.preset as PresetKey | undefined
     const task: AiTask = body.task || 'chat'
 
     if (preset === 'concise_summary' || task === 'summary') {
+      console.log('[AI API] Returning summary:', result.text.substring(0, 50) + '...')
       return Response.json({ summary: result.text })
     }
     if (preset === 'emoji_only' || task === 'emoji') {
       const emoji = result.text.trim()
       const first = emoji.split(/\s+/)[0] || ''
+      console.log('[AI API] Returning emoji:', first)
       return Response.json({ emoji: first })
     }
     if (preset === 'title_suggestion') {
+      console.log('[AI API] Returning title:', result.text.trim())
       return Response.json({ title: result.text.trim() })
     }
     if (preset === 'bullet_summary') {
+      console.log('[AI API] Returning bullets')
       return Response.json({ bullets: result.text.trim() })
     }
     if (preset === 'keywords') {
       const cleaned = result.text.replace(/\n/g, ' ').trim()
+      console.log('[AI API] Returning keywords:', cleaned)
       return Response.json({ keywords: cleaned })
     }
     if (preset === 'complete_summary') {
+      console.log('[AI API] Returning complete summary:', result.text.substring(0, 50) + '...')
       return Response.json({ summary: result.text })
     }
     if (preset === 'dynamic_greeting') {
+      console.log('[AI API] Returning greeting:', result.text)
       return Response.json({ greeting: result.text })
     }
 
+    console.log('[AI API] Returning generic output')
     return Response.json({ output: result.text })
   } catch (err: unknown) {
-    console.error('AI API error:', err)
+    console.error('[AI API] ❌ Error:', err)
     const message = err instanceof Error ? err.message : 'Unknown error'
     return new Response(message, { status: 500 })
   }
