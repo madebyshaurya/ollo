@@ -49,7 +49,6 @@ export interface CreateProjectData {
   type: "breadboard" | "pcb" | "custom"
   microcontroller?: string
   microcontrollerOther?: string
-  complexity: number
   budget: number
   purpose?: string
   targetAudience?: string
@@ -61,7 +60,6 @@ export async function createProject(data: CreateProjectData) {
   console.log('[createProject] Starting project creation with data:', {
     name: data.name,
     type: data.type,
-    complexity: data.complexity,
     budget: data.budget
   })
 
@@ -83,7 +81,6 @@ export async function createProject(data: CreateProjectData) {
       type: data.type,
       microcontroller: data.microcontroller || null,
       microcontroller_other: data.microcontrollerOther || null,
-      complexity: data.complexity,
       budget: data.budget,
       purpose: data.purpose || null,
       target_audience: data.targetAudience || null,
@@ -290,7 +287,6 @@ type UpdateProjectData = {
   type?: "breadboard" | "pcb" | "custom"
   microcontroller?: string | null
   microcontrollerOther?: string | null
-  complexity?: number
   budget?: number | null
   purpose?: string | null
   targetAudience?: string | null
@@ -338,10 +334,6 @@ export async function updateProject(projectId: string, data: UpdateProjectData) 
 
     if (data.microcontrollerOther !== undefined) {
       updatePayload.microcontroller_other = data.microcontrollerOther || null
-    }
-
-    if (data.complexity !== undefined) {
-      updatePayload.complexity = data.complexity
     }
 
     if (data.budget !== undefined) {

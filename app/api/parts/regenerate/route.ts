@@ -53,7 +53,6 @@ Project Name: ${project.name}
 Description: ${project.description}
 Type: ${project.type}
 Microcontroller: ${project.microcontroller || project.microcontroller_other || 'Not specified'}
-Complexity: ${project.complexity}/10
 Budget: $${project.budget || 'Not specified'}
 User Location: ${userCountry}
 Preferred Currency: ${userCurrency}

@@ -40,8 +40,7 @@ export async function POST(req: Request) {
                 projectContext: {
                     name: project.name,
                     type: project.type,
-                    budget: project.budget,
-                    complexity: Math.round((project.complexity / 10))
+                    budget: project.budget
                 },
                 cached: true,
                 generatedAt: project.part_recommendations_generated_at
@@ -69,7 +68,6 @@ Project Name: ${project.name}
 Description: ${project.description}
 Type: ${project.type}
 Microcontroller: ${project.microcontroller || project.microcontroller_other || 'Not specified'}
-Complexity: ${project.complexity}/10
 Budget: $${project.budget || 'Not specified'}
 Purpose: ${project.purpose || 'Not specified'}
 Timeline: ${project.timeline || 'Not specified'}
@@ -160,8 +158,7 @@ Format your response as a JSON array with objects containing: name, type, descri
             projectContext: {
                 name: project.name,
                 type: project.type,
-                budget: project.budget,
-                complexity: Math.round((project.complexity / 10)) // Normalize complexity to 1-10 scale
+                budget: project.budget
             }
         })
     } catch (err: unknown) {

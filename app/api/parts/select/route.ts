@@ -8,7 +8,7 @@ export async function POST(req: Request) {
             return Response.json({ error: 'Missing required fields' }, { status: 400 })
         }
 
-        if (!['accept', 'reject'].includes(action)) {
+        if (!['accept', 'reject', 'remove'].includes(action)) {
             return Response.json({ error: 'Invalid action' }, { status: 400 })
         }
 
@@ -29,7 +29,13 @@ export async function POST(req: Request) {
 
         // Update selections
         const currentSelections = project.part_selections || {}
-        currentSelections[partIndex] = action
+
+        if (action === 'remove') {
+            // Remove the selection
+            delete currentSelections[partIndex]
+        } else {
+            currentSelections[partIndex] = action
+        }
 
         // Save to database
         const { error: updateError } = await supabase
