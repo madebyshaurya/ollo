@@ -6,7 +6,6 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { getDigiKeyAPI } from '@/lib/integrations/digikey'
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams
@@ -65,11 +64,7 @@ DIGIKEY_REFRESH_TOKEN=your_refresh_token</pre>
 
   // If we have a code, exchange it for tokens
   try {
-    const digikey = getDigiKeyAPI()
-    await digikey.getAccessToken(code)
-
-    // Get the tokens from the DigiKey instance (we need to access private members)
-    // For now, make another token request to display them
+    // Exchange code for tokens
     const axios = (await import('axios')).default
     const response = await axios.post('https://api.digikey.com/v1/oauth2/token', 
       new URLSearchParams({
