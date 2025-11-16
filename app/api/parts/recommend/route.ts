@@ -3,9 +3,6 @@ import { openai } from '@ai-sdk/openai'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { getUserPreferences } from '@/lib/actions/user-preferences'
 import { CURRENCIES } from '@/lib/utils/currencies'
-import { getDigiKeyAPI } from '@/lib/integrations/digikey'
-import { getFireCrawlScraper, FireCrawlScraper } from '@/lib/integrations/firecrawl-scraper'
-import type { SupplierPart } from '@/lib/integrations/digikey'
 
 interface PartRecommendation {
     name: string
@@ -118,7 +115,6 @@ Format your response as a JSON array with objects containing: name, type, descri
 
         // Parse the AI response
         let parts: PartRecommendation[] = []
-        const supplierParts: SupplierPart[] = []
         try {
             // Try to extract JSON from the response
             const jsonMatch = result.text.match(/\[[\s\S]*\]/)
@@ -127,49 +123,6 @@ Format your response as a JSON array with objects containing: name, type, descri
             } else {
                 parts = JSON.parse(result.text)
             }
-
-            // Now fetch REAL parts data from DigiKey/suppliers based on AI recommendations
-            console.log('[Parts API] Fetching real parts data from suppliers...')
-            
-            // Try DigiKey first (app-level authentication)
-            try {
-                const digikey = getDigiKeyAPI()
-                
-                for (const part of parts) {
-                    try {
-                        // Search for the part on DigiKey
-                        const searchResults = await digikey.searchProducts(part.name, {
-                            limit: 1,
-                            inStock: true
-                        })
-                        
-                        if (searchResults.length > 0) {
-                            supplierParts.push(searchResults[0])
-                        }
-                    } catch (searchError) {
-                        console.error('[Parts API] Error searching DigiKey for:', part.name, searchError)
-                    }
-                }
-            } catch (digikeyError) {
-                console.error('[Parts API] DigiKey error, trying regional suppliers:', digikeyError)
-                
-                // Fallback to regional suppliers via FireCrawl
-                const firecrawl = getFireCrawlScraper()
-                const regionalSupplier = FireCrawlScraper.getSupplierForCountry(userCountry)
-                
-                if (regionalSupplier) {
-                    for (const part of parts.slice(0, 3)) { // Limit to 3 to save credits
-                        try {
-                            const regionalResults = await firecrawl.searchSupplier(regionalSupplier, part.name)
-                            supplierParts.push(...regionalResults)
-                        } catch (scrapError) {
-                            console.error('[Parts API] Error scraping regional supplier:', scrapError)
-                        }
-                    }
-                }
-            }
-
-            console.log('[Parts API] Found', supplierParts.length, 'real parts from suppliers')
         } catch (parseError) {
             console.error('[Parts API] Failed to parse AI response:', parseError)
             // Return raw text if JSON parsing fails
@@ -181,22 +134,20 @@ Format your response as a JSON array with objects containing: name, type, descri
         }
 
         // Save recommendations to database
-        console.log('[Parts API] Saving', parts.length, 'part recommendations and', supplierParts.length, 'supplier parts to database...')
+        console.log('[Parts API] Saving', parts.length, 'part recommendations to database...')
         try {
             const { error: updateError } = await supabase
                 .from('projects')
                 .update({
                     part_recommendations: parts,
-                    part_recommendations_generated_at: new Date().toISOString(),
-                    supplier_parts_data: supplierParts, // Save real supplier data with images
-                    supplier_parts_last_fetched_at: new Date().toISOString()
+                    part_recommendations_generated_at: new Date().toISOString()
                 })
                 .eq('id', projectId)
 
             if (updateError) {
                 console.error('[Parts API] Failed to save recommendations:', updateError)
             } else {
-                console.log('[Parts API] ✅ Part recommendations and supplier data saved successfully')
+                console.log('[Parts API] ✅ Part recommendations saved successfully')
             }
         } catch (saveError) {
             console.error('[Parts API] Error saving recommendations:', saveError)
@@ -204,7 +155,6 @@ Format your response as a JSON array with objects containing: name, type, descri
 
         return Response.json({
             parts,
-            supplierParts,
             projectContext: {
                 name: project.name,
                 type: project.type,
