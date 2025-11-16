@@ -6,7 +6,6 @@ import { CURRENCIES } from '@/lib/utils/currencies'
 import { getDigiKeyAPI } from '@/lib/integrations/digikey'
 import { getFireCrawlScraper, FireCrawlScraper } from '@/lib/integrations/firecrawl-scraper'
 import type { SupplierPart } from '@/lib/integrations/digikey'
-import { auth } from '@clerk/nextjs/server'
 
 interface PartRecommendation {
     name: string
@@ -52,13 +51,6 @@ export async function POST(req: Request) {
         }
 
         console.log('[Parts API] Generating new part recommendations...')
-
-        // Get authenticated user for DigiKey
-        const { userId } = await auth()
-        const { clerkClient } = await import('@clerk/nextjs/server')
-        const client = await clerkClient()
-        const user = userId ? await client.users.getUser(userId) : null
-        const digikeyConnected = user?.privateMetadata.digikeyConnected as boolean || false
 
         // Get user preferences for currency/country context
         let userCurrency = 'USD'
@@ -139,7 +131,8 @@ Format your response as a JSON array with objects containing: name, type, descri
             // Now fetch REAL parts data from DigiKey/suppliers based on AI recommendations
             console.log('[Parts API] Fetching real parts data from suppliers...')
             
-            if (digikeyConnected) {
+            // Try DigiKey first (app-level authentication)
+            try {
                 const digikey = getDigiKeyAPI()
                 
                 for (const part of parts) {
@@ -157,10 +150,10 @@ Format your response as a JSON array with objects containing: name, type, descri
                         console.error('[Parts API] Error searching DigiKey for:', part.name, searchError)
                     }
                 }
-            } else {
-                console.log('[Parts API] DigiKey not connected, checking regional suppliers...')
+            } catch (digikeyError) {
+                console.error('[Parts API] DigiKey error, trying regional suppliers:', digikeyError)
                 
-                // Try regional suppliers via FireCrawl
+                // Fallback to regional suppliers via FireCrawl
                 const firecrawl = getFireCrawlScraper()
                 const regionalSupplier = FireCrawlScraper.getSupplierForCountry(userCountry)
                 

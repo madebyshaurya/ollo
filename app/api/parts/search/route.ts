@@ -38,33 +38,29 @@ export async function GET(request: NextRequest) {
     }
 
     // Get user's country preference for regional supplier selection
-    const { clerkClient } = await import('@clerk/nextjs/server')
-    const client = await clerkClient()
-    const user = await client.users.getUser(userId)
-    const userCountry = user.publicMetadata.country as string || 'US'
+    let userCountry = 'US'
+    try {
+      const { clerkClient } = await import('@clerk/nextjs/server')
+      const client = await clerkClient()
+      const user = await client.users.getUser(userId)
+      userCountry = user.publicMetadata.country as string || 'US'
+    } catch {
+      console.log('[Parts Search] Could not get user country, defaulting to US')
+    }
 
     console.log('[Parts Search] Searching for:', query, 'Country:', userCountry)
 
     const results: SupplierPart[] = []
 
-    // 1. Search DigiKey (primary source - free and unlimited)
+    // 1. Search DigiKey (primary source - free and unlimited, app-level auth)
     try {
       const digikey = getDigiKeyAPI()
-      
-      // Get stored tokens from Clerk metadata
-      const digikeyConnected = user.privateMetadata.digikeyConnected as boolean
-
-      if (digikeyConnected) {
-        // Search DigiKey with proper parameters
-        const digikeyResults = await digikey.searchProducts(query, {
-          limit,
-          inStock: true
-        })
-        results.push(...digikeyResults)
-        console.log('[Parts Search] DigiKey returned', digikeyResults.length, 'results')
-      } else {
-        console.log('[Parts Search] DigiKey not connected - skipping')
-      }
+      const digikeyResults = await digikey.searchProducts(query, {
+        limit,
+        inStock: true
+      })
+      results.push(...digikeyResults)
+      console.log('[Parts Search] DigiKey returned', digikeyResults.length, 'results')
     } catch (error) {
       console.error('[Parts Search] DigiKey error:', error)
       // Continue with other suppliers

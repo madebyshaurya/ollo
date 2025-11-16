@@ -105,6 +105,10 @@ export class DigiKeyAPI {
       redirectUri: process.env.DIGIKEY_REDIRECT_URI!
     }
 
+    // Load tokens from environment variables (app-level auth)
+    this.accessToken = process.env.DIGIKEY_ACCESS_TOKEN || null
+    this.refreshToken = process.env.DIGIKEY_REFRESH_TOKEN || null
+
     this.axiosInstance = axios.create({
       baseURL: 'https://api.digikey.com',
       headers: {
