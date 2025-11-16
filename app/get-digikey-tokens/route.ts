@@ -13,11 +13,14 @@ export async function GET(request: NextRequest) {
 
   // If no code, show authorization link
   if (!code) {
+    const clientId = process.env.DIGIKEY_CLIENT_ID || 'NOT_SET'
+    const redirectUri = `${request.nextUrl.origin}/get-digikey-tokens`
+    
     // Build authorization URL pointing to this endpoint
     const authUrl = `https://sso.digikey.com/as/authorization.oauth2?${new URLSearchParams({
       response_type: 'code',
-      client_id: process.env.DIGIKEY_CLIENT_ID!,
-      redirect_uri: `${request.nextUrl.origin}/get-digikey-tokens`
+      client_id: clientId,
+      redirect_uri: redirectUri
     }).toString()}`
 
     return new NextResponse(`
@@ -32,11 +35,19 @@ export async function GET(request: NextRequest) {
             a { color: #e63946; text-decoration: none; font-weight: bold; }
             a:hover { text-decoration: underline; }
             code { background: #fff; padding: 2px 6px; border-radius: 4px; font-size: 14px; }
+            .debug { background: #fff3cd; padding: 10px; border-radius: 4px; margin: 10px 0; font-size: 12px; font-family: monospace; }
           </style>
         </head>
         <body>
           <h1>🔑 DigiKey App Authorization</h1>
           <p>Follow these steps to get your access and refresh tokens:</p>
+          
+          <div class="debug">
+            <strong>🔍 Debug Info:</strong><br>
+            Client ID: ${clientId.substring(0, 10)}...${clientId.substring(clientId.length - 10)}<br>
+            Redirect URI: ${redirectUri}<br>
+            Auth URL: <a href="${authUrl}" style="word-break: break-all;">${authUrl}</a>
+          </div>
           
           <div class="step">
             <h3>Step 1: Authorize</h3>
