@@ -124,7 +124,7 @@ export class DigiKeyAPI {
       redirect_uri: this.config.redirectUri
     })
 
-    return `https://api.digikey.com/v1/oauth2/authorize?${params.toString()}`
+    return `https://sso.digikey.com/as/authorization.oauth2?${params.toString()}`
   }
 
   /**
