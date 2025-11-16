@@ -84,7 +84,7 @@ Format your response as a single JSON object (not an array) containing: name, ty
 
         console.log('[Regenerate Part] Calling AI for new recommendation...')
         const result = await generateText({
-            model: openai('gpt-4o-mini'),
+            model: openai('gpt-5-nano'),
             messages: [
                 {
                     role: 'system',

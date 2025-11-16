@@ -141,7 +141,6 @@ export function ProjectEditDetailsModal({
         type: projectType,
         microcontroller: microcontroller.trim() || null,
         microcontrollerOther: microcontrollerOther.trim() || null,
-        complexity,
         budget: parsedBudget,
         purpose: purpose.trim() || null,
         targetAudience: targetAudience.trim() || null,

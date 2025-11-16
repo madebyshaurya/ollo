@@ -175,7 +175,6 @@ export async function POST(request: Request) {
       description: payload.purpose,
       type: payload.projectType,
       budget,
-      complexity: inferredComplexity,
       purpose: payload.purpose,
       customDescription: JSON.stringify(intakeMetadata)
     })
