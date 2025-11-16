@@ -14,8 +14,12 @@ export async function GET(request: NextRequest) {
 
   // If no code, show authorization link
   if (!code) {
-    const digikey = getDigiKeyAPI()
-    const authUrl = digikey.getAuthorizationUrl()
+    // Build authorization URL pointing to this endpoint
+    const authUrl = `https://sso.digikey.com/as/authorization.oauth2?${new URLSearchParams({
+      response_type: 'code',
+      client_id: process.env.DIGIKEY_CLIENT_ID!,
+      redirect_uri: `${request.nextUrl.origin}/get-digikey-tokens`
+    }).toString()}`
 
     return new NextResponse(`
       <!DOCTYPE html>
