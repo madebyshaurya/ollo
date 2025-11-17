@@ -3,13 +3,27 @@ import { openai } from '@ai-sdk/openai'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { getUserPreferences } from '@/lib/actions/user-preferences'
 import { CURRENCIES } from '@/lib/utils/currencies'
+import { getBestSuppliersForUser } from '@/lib/suppliers/supplier-database'
+import { getFireCrawlScraper } from '@/lib/suppliers/firecrawl-scraper'
+import type { PartRecommendation as FirecrawlPartRecommendation } from '@/lib/suppliers/firecrawl-scraper'
+import { findAlternativeComponents } from '@/lib/suppliers/ai-alternatives'
 
 interface PartRecommendation {
     name: string
     type: string
     description: string
-    estimatedPrice: string
-    reason: string
+    estimatedPrice?: string
+    price?: number
+    currency?: string
+    reason?: string
+    supplier?: string
+    supplierUrl?: string
+    imageUrl?: string
+    partNumber?: string
+    manufacturer?: string
+    inStock?: boolean
+    alternativeFor?: string
+    specifications?: Record<string, string>
 }
 
 export async function POST(req: Request) {
@@ -47,7 +61,7 @@ export async function POST(req: Request) {
             })
         }
 
-        console.log('[Parts API] Generating new part recommendations...')
+        console.log('[Parts API] 🚀 Generating new part recommendations with real pricing...')
 
         // Get user preferences for currency/country context
         let userCurrency = 'USD'
@@ -62,6 +76,10 @@ export async function POST(req: Request) {
             console.warn('[Parts API] Could not fetch user preferences, using defaults:', prefError)
         }
 
+        // Get best suppliers for this user's location
+        const suppliers = getBestSuppliersForUser(userCurrency, 3)
+        console.log('[Parts API] Best suppliers:', suppliers.map(s => s.name).join(', '))
+
         // Build context for AI
         const projectContext = `
 Project Name: ${project.name}
@@ -75,35 +93,30 @@ User Location: ${userCountry}
 Preferred Currency: ${userCurrency}
     `.trim()
 
-        const prompt = `Based on the following project details, recommend 5-8 electronic parts/components that would be needed for this project.
+        // Step 1: Get AI recommendations for initial parts list
+        console.log('[Parts API] Step 1: Getting AI recommendations...')
+        const prompt = `Based on the following project details, recommend 4-5 essential electronic parts/components.
 
 ${projectContext}
 
-IMPORTANT INSTRUCTIONS:
-- All prices MUST be in ${userCurrency} currency
-- Recommend parts that are commonly available in ${userCountry}
-- Consider local suppliers and distributors common in ${userCountry}
-- For India: suggest parts from local suppliers like Robu.in, ElectronicWings, or international sites that ship there
-- For USA/Europe: suggest parts from Digi-Key, Mouser, SparkFun, Adafruit
-- For Asia-Pacific: consider local suppliers and Aliexpress/Banggood availability
-- Price parts realistically for the local market
-- Consider import costs and availability for the region
+IMPORTANT:
+- Be specific with part names and model numbers when possible
+- Focus on commonly available parts
+- Consider the user is in ${userCountry}
 
 For each part, provide:
-1. Part name (be specific with model numbers when relevant)
-2. Type/category (e.g., resistor, capacitor, sensor, etc.)
-3. Brief description (one sentence)
-4. Estimated price range in ${userCurrency}
-5. Why it's recommended for this project and region
+1. Specific part name or model number
+2. Type/category
+3. Brief description
 
-Format your response as a JSON array with objects containing: name, type, description, estimatedPrice, reason`
+Format as JSON array with: name, type, description`
 
-        const result = await generateText({
-            model: openai('gpt-5-nano'),
+        const aiResult = await generateText({
+            model: openai('gpt-4o-mini'),
             messages: [
                 {
                     role: 'system',
-                    content: 'You are an expert electronics engineer helping recommend parts for DIY electronics projects. Provide practical, commonly available parts with realistic pricing. Always respond with valid JSON only.'
+                    content: 'You are an expert electronics engineer. Recommend specific, commonly available parts. Always respond with valid JSON only.'
                 },
                 {
                     role: 'user',
@@ -113,25 +126,163 @@ Format your response as a JSON array with objects containing: name, type, descri
             temperature: 0.7
         })
 
-        // Parse the AI response
-        let parts: PartRecommendation[] = []
+        // Parse AI recommendations
+        let aiRecommendations: Array<{ name: string; type: string; description: string }> = []
         try {
-            // Try to extract JSON from the response
-            const jsonMatch = result.text.match(/\[[\s\S]*\]/)
+            const jsonMatch = aiResult.text.match(/\[[\s\S]*\]/)
             if (jsonMatch) {
-                parts = JSON.parse(jsonMatch[0])
+                aiRecommendations = JSON.parse(jsonMatch[0])
             } else {
-                parts = JSON.parse(result.text)
+                aiRecommendations = JSON.parse(aiResult.text)
             }
+            console.log(`[Parts API] ✅ Got ${aiRecommendations.length} AI recommendations`)
         } catch (parseError) {
             console.error('[Parts API] Failed to parse AI response:', parseError)
-            // Return raw text if JSON parsing fails
             return Response.json({
                 parts: [],
-                rawResponse: result.text,
                 error: 'Failed to parse AI response'
             })
         }
+
+        // Step 2: Enrich parts with real pricing using Firecrawl
+        console.log('[Parts API] Step 2: Enriching with real pricing from suppliers...')
+        const parts: PartRecommendation[] = []
+
+        try {
+            const scraper = getFireCrawlScraper()
+
+            // Get real pricing for top 3 parts
+            const partsToEnrich = aiRecommendations.slice(0, 3)
+
+            for (const aiPart of partsToEnrich) {
+                console.log(`[Parts API] Searching for "${aiPart.name}"...`)
+
+                let foundRealPart = false
+
+                // Try top 2 suppliers
+                for (const supplier of suppliers.slice(0, 2)) {
+                    if (foundRealPart) break
+
+                    try {
+                        const products = await scraper.searchSupplier(supplier, aiPart.name)
+
+                        if (products.length > 0 && products[0].price) {
+                            const product = products[0]
+                            parts.push({
+                                name: product.name || aiPart.name,
+                                type: aiPart.type,
+                                description: product.description || aiPart.description,
+                                price: product.price,
+                                currency: product.currency || userCurrency,
+                                supplier: supplier.name,
+                                supplierUrl: product.productUrl,
+                                imageUrl: product.imageUrl,
+                                partNumber: product.partNumber,
+                                manufacturer: product.manufacturer,
+                                inStock: product.stock?.toLowerCase().includes('stock') !== false,
+                                specifications: product.specifications
+                            })
+                            foundRealPart = true
+                            console.log(`[Parts API] ✅ Found real pricing: ${product.price} ${product.currency}`)
+                        }
+                    } catch (error) {
+                        console.error(`[Parts API] Error searching ${supplier.name}:`, error)
+                    }
+                }
+
+                // If no real pricing found, add with AI estimate
+                if (!foundRealPart) {
+                    parts.push({
+                        name: aiPart.name,
+                        type: aiPart.type,
+                        description: aiPart.description,
+                        estimatedPrice: 'Price varies by supplier',
+                        currency: userCurrency
+                    })
+                }
+            }
+
+            // Add remaining AI recommendations without real pricing
+            for (const aiPart of aiRecommendations.slice(3)) {
+                parts.push({
+                    name: aiPart.name,
+                    type: aiPart.type,
+                    description: aiPart.description,
+                    estimatedPrice: 'Check supplier for pricing',
+                    currency: userCurrency
+                })
+            }
+
+            // Step 3: Find alternatives for the first key component
+            if (parts.length > 0 && parts[0].price) {
+                console.log('[Parts API] Step 3: Finding alternative components...')
+                try {
+                    const alternatives = await findAlternativeComponents({
+                        originalPart: {
+                            name: parts[0].name,
+                            type: parts[0].type,
+                            description: parts[0].description,
+                            specifications: parts[0].specifications
+                        },
+                        projectContext,
+                        targetCurrency: userCurrency,
+                        maxAlternatives: 2
+                    })
+
+                    // Try to get real pricing for first alternative
+                    if (alternatives.length > 0) {
+                        const altSearchTerms = alternatives[0].searchTerms || [alternatives[0].name]
+
+                        for (const searchTerm of altSearchTerms.slice(0, 1)) {
+                            try {
+                                const scraper = getFireCrawlScraper()
+                                const products = await scraper.searchSupplier(suppliers[0], searchTerm)
+
+                                if (products.length > 0 && products[0].price) {
+                                    const product = products[0]
+                                    parts.push({
+                                        name: product.name || alternatives[0].name,
+                                        type: alternatives[0].type,
+                                        description: alternatives[0].description,
+                                        price: product.price,
+                                        currency: product.currency || userCurrency,
+                                        supplier: suppliers[0].name,
+                                        supplierUrl: product.productUrl,
+                                        alternativeFor: parts[0].name,
+                                        inStock: product.stock?.toLowerCase().includes('stock') !== false
+                                    })
+                                    console.log('[Parts API] ✅ Found alternative with real pricing')
+                                    break
+                                }
+                            } catch (error) {
+                                console.error('[Parts API] Error finding alternative pricing:', error)
+                            }
+                        }
+                    }
+                } catch (error) {
+                    console.error('[Parts API] Error finding alternatives:', error)
+                }
+            }
+
+        } catch (error) {
+            console.error('[Parts API] Error enriching parts:', error)
+            // Fall back to AI-only recommendations
+            for (const aiPart of aiRecommendations) {
+                parts.push({
+                    name: aiPart.name,
+                    type: aiPart.type,
+                    description: aiPart.description,
+                    estimatedPrice: 'Check supplier for pricing',
+                    currency: userCurrency
+                })
+            }
+        }
+
+        console.log(`[Parts API] 🎉 Generated ${parts.length} part recommendations`)
+
+        // Log summary
+        const partsWithRealPricing = parts.filter(p => p.price !== undefined)
+        console.log(`[Parts API] Parts with real pricing: ${partsWithRealPricing.length}/${parts.length}`)
 
         // Save recommendations to database
         console.log('[Parts API] Saving', parts.length, 'part recommendations to database...')

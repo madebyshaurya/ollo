@@ -11,7 +11,9 @@ I made ollo becuase of the struggles I had when I started doing hardware. I am m
 ⏳ = Coming soon
 
 - **🤖 AI-Powered Project Planning** - When making new project we ask relevant questions for your project.
-- **⏳ 📦 Smart Parts Recommendations** - Automated component sourcing from major suppliers
+- **📦 Smart Parts Recommendations** - Real-time component pricing from global suppliers using Firecrawl + AI
+- **🔍 Intelligent Parts Search** - Search across multiple electronics suppliers based on your location
+- **🔄 Alternative Components Finder** - AI-powered suggestions for compatible alternative parts
 - **🎯 Context-Aware AI** - Remembers your project details for personalized suggestions
 - **⏳ ⚡ Real-time Updates** - Live project status and progress tracking
 
@@ -23,8 +25,9 @@ I made ollo becuase of the struggles I had when I started doing hardware. I am m
 - **UI/Styling:** Tailwind CSS 4, Radix UI, Motion
 - **Authentication:** Clerk
 - **Database:** Supabase
-- **AI:** OpenAI GPT-5 Nano (via AI SDK)
-- **Type Safety:** TypeScript 5
+- **AI:** OpenAI GPT-4o Mini & GPT-5 Nano (via AI SDK), Google Gemini 2.5 Flash
+- **Web Scraping:** Firecrawl (for real-time parts pricing)
+- **Type Safety:** TypeScript 5 + Zod
 
 ---
 
@@ -32,11 +35,12 @@ I made ollo becuase of the struggles I had when I started doing hardware. I am m
 
 ### Prerequisites
 
-- Node.js 20+ 
+- Node.js 20+
 - npm/yarn/pnpm/bun
 - Clerk account
 - Supabase project
 - OpenAI API key
+- Firecrawl API key (for parts pricing)
 
 ### Installation
 
@@ -64,6 +68,8 @@ CLERK_WEBHOOK_SECRET=
 NEXT_PUBLIC_SUPABASE_URL=
 SUPABASE_SERVICE_ROLE_KEY=
 OPENAI_API_KEY=
+GOOGLE_GENERATIVE_AI_API_KEY=
+FIRECRAWL_API_KEY=
 NEXT_PUBLIC_APP_URL=
 ```
 
@@ -108,7 +114,9 @@ ollo/
 | `CLERK_WEBHOOK_SECRET` | Webhook signature verification |
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase admin key |
-| `OPENAI_API_KEY` | OpenAI API key |
+| `OPENAI_API_KEY` | OpenAI API key for GPT-4o Mini & GPT-5 Nano |
+| `GOOGLE_GENERATIVE_AI_API_KEY` | Google AI API key for Gemini 2.5 Flash |
+| `FIRECRAWL_API_KEY` | Firecrawl API key for web scraping parts suppliers |
 | `NEXT_PUBLIC_APP_URL` | Application base URL |
 
 ---
