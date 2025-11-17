@@ -278,7 +278,7 @@ export function ProjectEditDetailsModal({
             />
           </section>
 
-  <section className="space-y-2">
+          <section className="space-y-2">
             <Label htmlFor="description">Project description</Label>
             <Textarea
               id="description"
