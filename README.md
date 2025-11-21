@@ -1,20 +1,23 @@
 
 # ollo 🔧 ⚡
 
-I made ollo becuase of the struggles I had when I started doing hardware. I am making ollo to smoothen out that experience and help beginners with their hardware imaginations.
+I made ollo because of the struggles I had when I started doing hardware. Ollo smoothens out that experience and helps beginners bring their hardware imaginations to life.
 
 ---
 
 ![alt text](image.png)
 
 ## Features
-⏳ = Coming soon
 
-- **🤖 AI-Powered Project Planning** - Answer relevant questions to get tailored project guidance
-- **⏳ 📦 Smart Parts Recommendations** - Automated component sourcing from major suppliers
-- **🎯 Context-Aware AI** - Remembers your project details for personalized suggestions
-- **📄 Datasheets & Documentation** - Automatic datasheet fetching and educational resources for components
-- **⏳ ⚡ Real-time Updates** - Live project status and progress tracking
+- **🤖 AI-Powered Project Planning** - Answer dynamic, experience-adaptive questions to get tailored project guidance
+- **📦 Smart Parts Recommendations** - AI-powered component suggestions with categorization and sourcing
+- **🎯 Context-Aware AI** - Remembers your project details for personalized suggestions throughout your workflow
+- **📄 Datasheets & Documentation** - Automatic datasheet fetching via Nexar/Octopart integration with visual previews
+- **🔄 Workflow Management** - Guided stages for breadboard prototypes, PCB designs, and custom hardware builds
+- **✅ Task Tracking** - Stage-specific tasks and artifact suggestions to keep your project organized
+- **🔍 Part Search & Selection** - Search across major suppliers (Mouser, DigiKey, SparkFun, JLCPCB, LCSC, PCBway)
+- **💰 Budget Tracking** - Set and monitor project budgets with currency preferences
+- **📝 Custom Part Lists** - Add and manage your own components alongside AI suggestions
 
 ---
 
@@ -85,20 +88,37 @@ Open [http://localhost:3000](http://localhost:3000) to see the app.
 ollo/
 ├── app/                    # Next.js app directory
 │   ├── api/               # API routes
+│   │   ├── ai/           # GPT-5 Nano for metadata generation
+│   │   ├── intake/       # Dynamic question generation (Gemini 2.5 Flash)
+│   │   ├── parts/        # Part recommendations & search
+│   │   └── projects/     # Project workflow management
 │   ├── dashboard/         # Dashboard pages
+│   │   ├── [id]/         # Project detail & settings
+│   │   └── settings/     # User preferences
 │   └── page.tsx           # Landing page
 ├── components/            # React components
-│   ├── ui/               # UI primitives
-│   ├── dashboard/        # Dashboard-specific
-│   └── settings/         # Settings components
+│   ├── ui/               # UI primitives (Radix UI)
+│   ├── dashboard/        # Dashboard-specific components
+│   ├── settings/         # Settings components
+│   └── datasheets/       # Datasheet viewer components
 ├── lib/                   # Utilities & services
-│   ├── actions/          # Server actions
-│   ├── services/         # Business logic
-│   └── utils/            # Helper functions
-└── types/                 # TypeScript types
+│   ├── actions/          # Server actions (projects, context, preferences)
+│   ├── services/         # Business logic (parts, datasheets)
+│   ├── workflows.ts      # Workflow stage management
+│   └── utils.ts          # Helper functions
+└── types/                 # TypeScript type definitions
 ```
 
+---
 
+## How It Works
+
+1. **Create a Project** - Choose between breadboard prototype, PCB design, or custom hardware
+2. **Answer Questions** - Respond to AI-generated, experience-adaptive intake questions
+3. **Get Recommendations** - Receive AI-powered part suggestions organized by category
+4. **Follow Workflows** - Progress through stage-specific tasks and guidance
+5. **Search & Select Parts** - Search suppliers and view datasheets with visual previews
+6. **Track Progress** - Monitor budget, manage tasks, and advance through workflow stages
 
 ---
 
@@ -129,9 +149,38 @@ npm run lint     # Run ESLint
 
 ---
 
+## Key Technologies
+
+- **Next.js 16** with App Router and React Server Components for optimal performance
+- **Turbopack** for lightning-fast development and builds
+- **OpenAI GPT-5 Nano** for intelligent project metadata generation
+- **Google Gemini 2.5 Flash** for adaptive intake question generation via AI SDK
+- **Clerk** for secure, production-ready authentication
+- **Supabase** with JSONB fields for flexible data modeling
+- **Nexar/Octopart** integration for automatic datasheet fetching
+- **Radix UI** + **Tailwind CSS 4** for accessible, beautiful components
+- **TypeScript 5** for end-to-end type safety
+
+---
+
+## Architecture Highlights
+
+- **Server Actions** for all data mutations with built-in revalidation
+- **JSONB Fields** for dynamic part categories and intake answers
+- **Workflow System** with three distinct flows (breadboard, PCB, custom)
+- **Experience-Adaptive AI** that adjusts question complexity based on user level
+- **Row-Level Security** via Supabase with Clerk user ID filtering
+- **Webhook-Based Sync** for user lifecycle management
+
+---
+
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+This project is feature-complete and stable. For bug reports or feature suggestions, please open an issue.
+
+## License
+
+This project is open source and available under the MIT License.
 
 ## Contact
 
