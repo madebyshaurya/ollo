@@ -61,6 +61,12 @@ export function ProjectMainContent({ projectId }: { projectId: string }) {
                 setParts(data.parts || [])
                 setProjectContext(data.projectContext || null)
                 setBudgetValue(data.projectContext?.budget?.toString() || '')
+
+                // Load existing selections from database
+                if (data.selections) {
+                    setSelections(data.selections)
+                    console.log('[Parts] Loaded existing selections:', data.selections)
+                }
             } catch (err) {
                 console.error('Error fetching parts:', err)
                 setError(err instanceof Error ? err.message : 'Failed to load recommendations')

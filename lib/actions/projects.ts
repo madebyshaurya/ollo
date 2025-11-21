@@ -4,6 +4,19 @@ import { createServerSupabaseClient, getCurrentUserId } from "@/lib/supabase-ser
 import { revalidatePath } from "next/cache"
 import { getInitialStage, getNextStage, ProjectStageId } from "@/lib/workflows"
 
+export interface AppNoteRecord {
+  title: string
+  url: string
+  type: string
+  source?: string
+}
+
+export interface TutorialRecord {
+  title: string
+  url: string
+  source: string
+}
+
 export interface ProjectPartSuggestionRecord {
   id: string
   title: string
@@ -22,6 +35,10 @@ export interface ProjectPartSuggestionRecord {
   status: "pending" | "accepted" | "dismissed"
   confidence: "sample" | "live"
   source: string
+  datasheetUrl?: string | null
+  datasheetSource?: "octopart" | "manual" | "digikey" | "mouser" | "fallback" | null
+  appNotes?: AppNoteRecord[]
+  tutorials?: TutorialRecord[]
 }
 
 export interface ProjectPartUserItemRecord {

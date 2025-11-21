@@ -20,11 +20,11 @@ export async function POST(req: Request) {
             return Response.json({ error: 'Project ID is required' }, { status: 400 })
         }
 
-        // Fetch project details
+        // Fetch project details including part selections
         const supabase = await createServerSupabaseClient()
         const { data: project, error } = await supabase
             .from('projects')
-            .select('*')
+            .select('*, part_selections')
             .eq('id', projectId)
             .single()
 
@@ -35,6 +35,10 @@ export async function POST(req: Request) {
         // Check if we have saved recommendations and don't need to regenerate
         if (!forceRegenerate && project.part_recommendations && Array.isArray(project.part_recommendations)) {
             console.log('[Parts API] Returning cached recommendations from database')
+
+            // Also fetch part_selections to show which parts are already selected
+            const partSelections = project.part_selections || {}
+
             return Response.json({
                 parts: project.part_recommendations,
                 projectContext: {
@@ -42,6 +46,7 @@ export async function POST(req: Request) {
                     type: project.type,
                     budget: project.budget
                 },
+                selections: partSelections,
                 cached: true,
                 generatedAt: project.part_recommendations_generated_at
             })
@@ -153,13 +158,17 @@ Format your response as a JSON array with objects containing: name, type, descri
             console.error('[Parts API] Error saving recommendations:', saveError)
         }
 
+        // Return parts with current selections
+        const partSelections = project.part_selections || {}
+
         return Response.json({
             parts,
             projectContext: {
                 name: project.name,
                 type: project.type,
                 budget: project.budget
-            }
+            },
+            selections: partSelections
         })
     } catch (err: unknown) {
         console.error('Parts recommendation API error:', err)

@@ -5,9 +5,11 @@ import Link from "next/link"
 import { ArrowLeft, Settings2, Brain } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { ProjectStatusMenu } from "@/components/dashboard/project-status-menu"
 import { ProjectContextModal } from "@/components/ui/project-context-modal"
 import { ProjectMainContent } from "@/components/dashboard/project-main-content"
+import { ProjectDocumentationTab } from "@/components/dashboard/project-documentation-tab"
 import type { ProjectStageId } from "@/lib/workflows"
 
 type ProjectStatus = "planning" | "in-progress" | "completed" | "paused"
@@ -103,8 +105,21 @@ export function ProjectDetailShell({ project }: { project: ProjectDetailData }) 
         </div>
       </header>
 
-      {/* Main Content Section */}
-      <ProjectMainContent projectId={project.id} />
+      {/* Tab Navigation */}
+      <Tabs defaultValue="overview" className="w-full">
+        <TabsList className="w-full justify-start">
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="documentation">Docs & Datasheets</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="overview" className="mt-6">
+          <ProjectMainContent projectId={project.id} />
+        </TabsContent>
+
+        <TabsContent value="documentation" className="mt-6">
+          <ProjectDocumentationTab projectId={project.id} />
+        </TabsContent>
+      </Tabs>
 
       {/* Context Modal */}
       <ProjectContextModal

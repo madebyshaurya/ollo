@@ -40,7 +40,11 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# documentation (generated)
+# documentation (internal/generated)
 /docs/PARTS_API_RESEARCH.md
 /docs/IMPLEMENTATION_SUMMARY.md
 /docs/QUICK_START.md
+CLAUDE.md
+setup-supabase.md
+.cursor/
+.cursorrules

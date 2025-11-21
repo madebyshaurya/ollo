@@ -10,9 +10,10 @@ I made ollo becuase of the struggles I had when I started doing hardware. I am m
 ## Features
 ⏳ = Coming soon
 
-- **🤖 AI-Powered Project Planning** - When making new project we ask relevant questions for your project.
+- **🤖 AI-Powered Project Planning** - Answer relevant questions to get tailored project guidance
 - **⏳ 📦 Smart Parts Recommendations** - Automated component sourcing from major suppliers
 - **🎯 Context-Aware AI** - Remembers your project details for personalized suggestions
+- **📄 Datasheets & Documentation** - Automatic datasheet fetching and educational resources for components
 - **⏳ ⚡ Real-time Updates** - Live project status and progress tracking
 
 ---
@@ -23,7 +24,7 @@ I made ollo becuase of the struggles I had when I started doing hardware. I am m
 - **UI/Styling:** Tailwind CSS 4, Radix UI, Motion
 - **Authentication:** Clerk
 - **Database:** Supabase
-- **AI:** OpenAI GPT-5 Nano (via AI SDK)
+- **AI:** OpenAI GPT-5 Nano, Google Gemini 2.5 Flash (via AI SDK)
 - **Type Safety:** TypeScript 5
 
 ---
@@ -65,9 +66,11 @@ NEXT_PUBLIC_SUPABASE_URL=
 SUPABASE_SERVICE_ROLE_KEY=
 OPENAI_API_KEY=
 NEXT_PUBLIC_APP_URL=
+NEXAR_CLIENT_ID=                     # Optional: Nexar/Octopart client ID for datasheet fetching
+NEXAR_CLIENT_SECRET=                 # Optional: Nexar/Octopart client secret
 ```
 
-4. Run the development server:
+1. Run the development server:
 ```bash
 npm run dev
 ```
@@ -110,6 +113,8 @@ ollo/
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase admin key |
 | `OPENAI_API_KEY` | OpenAI API key |
 | `NEXT_PUBLIC_APP_URL` | Application base URL |
+| `NEXAR_CLIENT_ID` | Optional: Nexar/Octopart client ID for automatic datasheet fetching |
+| `NEXAR_CLIENT_SECRET` | Optional: Nexar/Octopart client secret for automatic datasheet fetching |
 
 ---
 
