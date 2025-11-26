@@ -49,13 +49,16 @@ export function ProjectMainContent({ projectId }: { projectId: string }) {
                 })
 
                 if (!response.ok) {
-                    throw new Error('Failed to fetch part recommendations')
+                    const errorText = await response.text()
+                    console.error('[Parts] API error response:', errorText)
+                    throw new Error(`Failed to fetch part recommendations (${response.status}): ${errorText}`)
                 }
 
                 const data = await response.json()
 
                 if (data.error) {
-                    throw new Error(data.error)
+                    console.error('[Parts] API returned error:', data.error)
+                    throw new Error(`Part recommendations error: ${data.error}`)
                 }
 
                 setParts(data.parts || [])
@@ -68,8 +71,9 @@ export function ProjectMainContent({ projectId }: { projectId: string }) {
                     console.log('[Parts] Loaded existing selections:', data.selections)
                 }
             } catch (err) {
-                console.error('Error fetching parts:', err)
-                setError(err instanceof Error ? err.message : 'Failed to load recommendations')
+                console.error('[Parts] Error fetching parts:', err)
+                const errorMsg = err instanceof Error ? err.message : 'Failed to load recommendations'
+                setError(`${errorMsg}. Check browser console for details.`)
             } finally {
                 setLoading(false)
             }

@@ -112,6 +112,7 @@ export function ProjectCreationModal({ children }: ProjectCreationModalProps) {
   const [currentAnswer, setCurrentAnswer] = React.useState<string | number | null>(null)
   const [currentMultipleChoiceAnswers, setCurrentMultipleChoiceAnswers] = React.useState<string[]>([])
   const [dynamicAnswers, setDynamicAnswers] = React.useState<IntakeAnswerRecord[]>([])
+  const [askedQuestions, setAskedQuestions] = React.useState<Set<string>>(new Set())
 
   const [remainingQuestions, setRemainingQuestions] = React.useState<number | null>(null)
   const [questionLimitReached, setQuestionLimitReached] = React.useState(false)
@@ -191,6 +192,7 @@ export function ProjectCreationModal({ children }: ProjectCreationModalProps) {
     setCurrentAnswer(null)
     setCurrentMultipleChoiceAnswers([])
     setDynamicAnswers([])
+    setAskedQuestions(new Set())
     setRemainingQuestions(null)
     setQuestionLimitReached(false)
     setIsInitializing(false)
@@ -352,6 +354,20 @@ export function ProjectCreationModal({ children }: ProjectCreationModalProps) {
           return
         }
 
+        // Check for duplicate questions to prevent looping
+        const questionKey = `${data.question.type}:${data.question.prompt}`
+        if (askedQuestions.has(questionKey)) {
+          console.warn('[Intake] Duplicate question detected, ending intake flow to prevent loop')
+          setCurrentQuestion(null)
+          setCurrentSequence(null)
+          setRemainingQuestions(0)
+          setQuestionLimitReached(true)
+          return
+        }
+
+        // Mark this question as asked
+        setAskedQuestions(prev => new Set(prev).add(questionKey))
+
         setCurrentQuestion(data.question)
         setCurrentSequence(data.sequence)
         setRemainingQuestions(typeof data.remaining === "number" ? data.remaining : null)
@@ -388,7 +404,7 @@ export function ProjectCreationModal({ children }: ProjectCreationModalProps) {
         }
       }
     },
-    [projectType, projectName, purpose, experienceLevel, dynamicAnswers, questionLimitReached, parseResponse]
+    [projectType, projectName, purpose, experienceLevel, dynamicAnswers, questionLimitReached, askedQuestions, parseResponse]
   )
 
   React.useEffect(() => {

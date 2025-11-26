@@ -51,9 +51,29 @@ export async function POST(req: Request) {
 
   try {
     if (eventType === 'user.created') {
-      const { id } = evt.data
+      const { id, email_addresses, first_name, last_name } = evt.data
 
       console.log(`👤 User created: ${id}`)
+
+      // Create user profile in Supabase
+      const primaryEmail = email_addresses?.[0]?.email_address || null
+
+      const { error: profileError } = await supabase
+        .from('user_profiles')
+        .insert({
+          clerk_user_id: id,
+          email: primaryEmail,
+          first_name: first_name || null,
+          last_name: last_name || null,
+          created_at: new Date().toISOString(),
+        })
+
+      if (profileError) {
+        console.error('Error creating user profile:', profileError)
+        return new Response('Error creating user profile', { status: 500 })
+      }
+
+      console.log('✅ User profile created in Supabase')
 
     } else if (eventType === 'user.deleted') {
       const { id } = evt.data
