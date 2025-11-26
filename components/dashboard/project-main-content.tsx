@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Check, X, Loader2, Edit2, DollarSign } from 'lucide-react'
 import { toast } from 'sonner'
 import { updateProject } from '@/lib/actions/projects'
+import { PartsSkeleton } from '@/components/ui/parts-skeleton'
 
 interface PartRecommendation {
     name: string
@@ -33,12 +34,14 @@ export function ProjectMainContent({ projectId }: { projectId: string }) {
     const [editingBudget, setEditingBudget] = useState(false)
     const [budgetValue, setBudgetValue] = useState('')
     const [savingBudget, setSavingBudget] = useState(false)
+    const [streamingStatus, setStreamingStatus] = useState<string | null>(null)
 
     useEffect(() => {
         async function fetchParts() {
             try {
                 setLoading(true)
                 setError(null)
+                setStreamingStatus(null)
 
                 const response = await fetch('/api/parts/recommend', {
                     method: 'POST',
@@ -54,21 +57,80 @@ export function ProjectMainContent({ projectId }: { projectId: string }) {
                     throw new Error(`Failed to fetch part recommendations (${response.status}): ${errorText}`)
                 }
 
-                const data = await response.json()
+                // Check if response is streaming (event-stream) or regular JSON
+                const contentType = response.headers.get('content-type')
 
-                if (data.error) {
-                    console.error('[Parts] API returned error:', data.error)
-                    throw new Error(`Part recommendations error: ${data.error}`)
-                }
+                if (contentType?.includes('text/event-stream')) {
+                    // Handle streaming response
+                    console.log('[Parts] Receiving streaming response...')
 
-                setParts(data.parts || [])
-                setProjectContext(data.projectContext || null)
-                setBudgetValue(data.projectContext?.budget?.toString() || '')
+                    const reader = response.body?.getReader()
+                    const decoder = new TextDecoder()
 
-                // Load existing selections from database
-                if (data.selections) {
-                    setSelections(data.selections)
-                    console.log('[Parts] Loaded existing selections:', data.selections)
+                    if (!reader) {
+                        throw new Error('No response body reader available')
+                    }
+
+                    let buffer = ''
+
+                    while (true) {
+                        const { done, value } = await reader.read()
+
+                        if (done) break
+
+                        buffer += decoder.decode(value, { stream: true })
+                        const lines = buffer.split('\n\n')
+                        buffer = lines.pop() || ''
+
+                        for (const line of lines) {
+                            if (line.startsWith('data: ')) {
+                                try {
+                                    const data = JSON.parse(line.slice(6))
+
+                                    if (data.type === 'status') {
+                                        setStreamingStatus(data.message)
+                                        console.log('[Parts] Status:', data.message)
+                                    } else if (data.type === 'progress') {
+                                        setStreamingStatus(data.message)
+                                    } else if (data.type === 'complete') {
+                                        setParts(data.parts || [])
+                                        setProjectContext(data.projectContext || null)
+                                        setBudgetValue(data.projectContext?.budget?.toString() || '')
+
+                                        if (data.selections) {
+                                            setSelections(data.selections)
+                                            console.log('[Parts] Loaded existing selections:', data.selections)
+                                        }
+
+                                        setStreamingStatus(null)
+                                        console.log('[Parts] Stream complete, loaded', data.parts?.length, 'parts')
+                                    } else if (data.type === 'error') {
+                                        throw new Error(data.message)
+                                    }
+                                } catch (parseErr) {
+                                    console.error('[Parts] Failed to parse stream data:', parseErr, line)
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    // Handle regular JSON response (cached data)
+                    const data = await response.json()
+
+                    if (data.error) {
+                        console.error('[Parts] API returned error:', data.error)
+                        throw new Error(`Part recommendations error: ${data.error}`)
+                    }
+
+                    setParts(data.parts || [])
+                    setProjectContext(data.projectContext || null)
+                    setBudgetValue(data.projectContext?.budget?.toString() || '')
+
+                    // Load existing selections from database
+                    if (data.selections) {
+                        setSelections(data.selections)
+                        console.log('[Parts] Loaded existing selections:', data.selections)
+                    }
                 }
             } catch (err) {
                 console.error('[Parts] Error fetching parts:', err)
@@ -76,6 +138,7 @@ export function ProjectMainContent({ projectId }: { projectId: string }) {
                 setError(`${errorMsg}. Check browser console for details.`)
             } finally {
                 setLoading(false)
+                setStreamingStatus(null)
             }
         }
 
@@ -204,10 +267,16 @@ export function ProjectMainContent({ projectId }: { projectId: string }) {
                 </div>
 
                 {loading && (
-                    <div className="space-y-4">
-                        <div className="flex items-center justify-center py-8">
-                            <div className="text-muted-foreground">Loading recommendations...</div>
-                        </div>
+                    <div className="space-y-6">
+                        {streamingStatus && (
+                            <div className="flex items-center justify-center gap-3 py-4 px-6 rounded-lg bg-muted/50 border border-border/50">
+                                <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                                <span className="text-sm font-medium text-muted-foreground">
+                                    {streamingStatus}
+                                </span>
+                            </div>
+                        )}
+                        <PartsSkeleton />
                     </div>
                 )}
 

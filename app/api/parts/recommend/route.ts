@@ -1,4 +1,4 @@
-import { generateText } from 'ai'
+import { streamText } from 'ai'
 import { openai } from '@ai-sdk/openai'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { getUserPreferences } from '@/lib/actions/user-preferences'
@@ -52,7 +52,7 @@ export async function POST(req: Request) {
             })
         }
 
-        console.log('[Parts API] Generating new part recommendations...')
+        console.log('[Parts API] Generating new part recommendations with streaming...')
 
         // Get user preferences for currency/country context
         let userCurrency = 'USD'
@@ -103,72 +103,130 @@ For each part, provide:
 
 Format your response as a JSON array with objects containing: name, type, description, estimatedPrice, reason`
 
-        const result = await generateText({
-            model: openai('gpt-5-nano'),
-            messages: [
-                {
-                    role: 'system',
-                    content: 'You are an expert electronics engineer helping recommend parts for DIY electronics projects. Provide practical, commonly available parts with realistic pricing. Always respond with valid JSON only.'
-                },
-                {
-                    role: 'user',
-                    content: prompt
+        // Create a streaming response
+        const encoder = new TextEncoder()
+        const stream = new ReadableStream({
+            async start(controller) {
+                try {
+                    // Send initial status
+                    controller.enqueue(encoder.encode(`data: ${JSON.stringify({
+                        type: 'status',
+                        message: 'Analyzing your project requirements...'
+                    })}\n\n`))
+
+                    // Start AI streaming
+                    const result = streamText({
+                        model: openai('gpt-5-nano'),
+                        messages: [
+                            {
+                                role: 'system',
+                                content: 'You are an expert electronics engineer helping recommend parts for DIY electronics projects. Provide practical, commonly available parts with realistic pricing. Always respond with valid JSON only.'
+                            },
+                            {
+                                role: 'user',
+                                content: prompt
+                            }
+                        ],
+                        temperature: 0.7
+                    })
+
+                    controller.enqueue(encoder.encode(`data: ${JSON.stringify({
+                        type: 'status',
+                        message: 'Searching for compatible parts...'
+                    })}\n\n`))
+
+                    let fullText = ''
+
+                    // Stream the AI response
+                    for await (const chunk of result.textStream) {
+                        fullText += chunk
+                        controller.enqueue(encoder.encode(`data: ${JSON.stringify({
+                            type: 'progress',
+                            message: 'Generating recommendations...',
+                            chunk
+                        })}\n\n`))
+                    }
+
+                    controller.enqueue(encoder.encode(`data: ${JSON.stringify({
+                        type: 'status',
+                        message: 'Processing AI response...'
+                    })}\n\n`))
+
+                    // Parse the complete response
+                    let parts: PartRecommendation[] = []
+                    try {
+                        const jsonMatch = fullText.match(/\[[\s\S]*\]/)
+                        if (jsonMatch) {
+                            parts = JSON.parse(jsonMatch[0])
+                        } else {
+                            parts = JSON.parse(fullText)
+                        }
+                    } catch (parseError) {
+                        console.error('[Parts API] Failed to parse AI response:', parseError)
+                        controller.enqueue(encoder.encode(`data: ${JSON.stringify({
+                            type: 'error',
+                            message: 'Failed to parse AI response'
+                        })}\n\n`))
+                        controller.close()
+                        return
+                    }
+
+                    controller.enqueue(encoder.encode(`data: ${JSON.stringify({
+                        type: 'status',
+                        message: 'Saving recommendations...'
+                    })}\n\n`))
+
+                    // Save to database
+                    console.log('[Parts API] Saving', parts.length, 'part recommendations to database...')
+                    try {
+                        const { error: updateError } = await supabase
+                            .from('projects')
+                            .update({
+                                part_recommendations: parts,
+                                part_recommendations_generated_at: new Date().toISOString()
+                            })
+                            .eq('id', projectId)
+
+                        if (updateError) {
+                            console.error('[Parts API] Failed to save recommendations:', updateError)
+                        } else {
+                            console.log('[Parts API] ✅ Part recommendations saved successfully')
+                        }
+                    } catch (saveError) {
+                        console.error('[Parts API] Error saving recommendations:', saveError)
+                    }
+
+                    // Send final data
+                    const partSelections = project.part_selections || {}
+                    controller.enqueue(encoder.encode(`data: ${JSON.stringify({
+                        type: 'complete',
+                        parts,
+                        projectContext: {
+                            name: project.name,
+                            type: project.type,
+                            budget: project.budget
+                        },
+                        selections: partSelections
+                    })}\n\n`))
+
+                    controller.close()
+                } catch (err) {
+                    console.error('[Parts API] Streaming error:', err)
+                    controller.enqueue(encoder.encode(`data: ${JSON.stringify({
+                        type: 'error',
+                        message: err instanceof Error ? err.message : 'Unknown error'
+                    })}\n\n`))
+                    controller.close()
                 }
-            ],
-            temperature: 0.7
+            }
         })
 
-        // Parse the AI response
-        let parts: PartRecommendation[] = []
-        try {
-            // Try to extract JSON from the response
-            const jsonMatch = result.text.match(/\[[\s\S]*\]/)
-            if (jsonMatch) {
-                parts = JSON.parse(jsonMatch[0])
-            } else {
-                parts = JSON.parse(result.text)
-            }
-        } catch (parseError) {
-            console.error('[Parts API] Failed to parse AI response:', parseError)
-            // Return raw text if JSON parsing fails
-            return Response.json({
-                parts: [],
-                rawResponse: result.text,
-                error: 'Failed to parse AI response'
-            })
-        }
-
-        // Save recommendations to database
-        console.log('[Parts API] Saving', parts.length, 'part recommendations to database...')
-        try {
-            const { error: updateError } = await supabase
-                .from('projects')
-                .update({
-                    part_recommendations: parts,
-                    part_recommendations_generated_at: new Date().toISOString()
-                })
-                .eq('id', projectId)
-
-            if (updateError) {
-                console.error('[Parts API] Failed to save recommendations:', updateError)
-            } else {
-                console.log('[Parts API] ✅ Part recommendations saved successfully')
-            }
-        } catch (saveError) {
-            console.error('[Parts API] Error saving recommendations:', saveError)
-        }
-
-        // Return parts with current selections
-        const partSelections = project.part_selections || {}
-
-        return Response.json({
-            parts,
-            projectContext: {
-                name: project.name,
-                type: project.type,
-                budget: project.budget
+        return new Response(stream, {
+            headers: {
+                'Content-Type': 'text/event-stream',
+                'Cache-Control': 'no-cache',
+                'Connection': 'keep-alive',
             },
-            selections: partSelections
         })
     } catch (err: unknown) {
         console.error('Parts recommendation API error:', err)
